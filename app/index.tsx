@@ -19,7 +19,10 @@ export default function HomeScreen() {
 
   // Load active protocol on mount
   useEffect(() => {
-    loadActiveProtocol();
+    loadActiveProtocol().catch((error) => {
+      console.error('[HomeScreen] Failed to load:', error);
+      setLoading(false);
+    });
   }, []);
 
   // Handle pending bottle from deep link
