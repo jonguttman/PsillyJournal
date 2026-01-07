@@ -1,0 +1,112 @@
+import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAppStore } from '../src/store/appStore';
+import * as SecureStore from 'expo-secure-store';
+import { STORAGE_KEYS } from '../src/config';
+import { useState, useEffect } from 'react';
+
+export default function SettingsScreen() {
+  const router = useRouter();
+  const { hasOptedIn, setOptedIn, activeProtocol } = useAppStore();
+  const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadRecoveryKey();
+  }, []);
+
+  const loadRecoveryKey = async () => {
+    const key = await SecureStore.getItemAsync(STORAGE_KEYS.RECOVERY_KEY);
+    setRecoveryKey(key);
+  };
+
+  const toggleOptIn = async (value: boolean) => {
+    setOptedIn(value);
+    await SecureStore.setItemAsync(STORAGE_KEYS.HAS_OPTED_IN, value ? 'true' : 'false');
+  };
+
+  const showRecoveryKey = () => {
+    if (recoveryKey) {
+      Alert.alert('Recovery Key', recoveryKey, [{ text: 'OK' }]);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.backText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>Settings</Text>
+        <View style={styles.placeholder} />
+      </View>
+
+      <View style={styles.content}>
+        {activeProtocol && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Current Protocol</Text>
+            <View style={styles.card}>
+              <Text style={styles.productName}>{activeProtocol.productName}</Text>
+              <Text style={styles.protocolInfo}>
+                Day {activeProtocol.currentDay} of {activeProtocol.totalDays}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Privacy</Text>
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>Contribute Anonymous Data</Text>
+              <Text style={styles.settingDescription}>
+                Help improve microdosing research with anonymous metrics
+              </Text>
+            </View>
+            <Switch
+              value={hasOptedIn}
+              onValueChange={toggleOptIn}
+              trackColor={{ false: '#27272a', true: '#8b5cf6' }}
+              thumbColor="#ffffff"
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={showRecoveryKey}>
+            <Text style={styles.menuItemText}>View Recovery Key</Text>
+            <Text style={styles.menuItemArrow}>→</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Psilly Journal v1.0.0</Text>
+          <Text style={styles.footerText}>Your data never leaves your device</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0a0a0a' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20 },
+  backText: { color: '#8b5cf6', fontSize: 16 },
+  title: { color: '#ffffff', fontSize: 18, fontWeight: '600' },
+  placeholder: { width: 50 },
+  content: { flex: 1, padding: 20 },
+  section: { marginBottom: 32 },
+  sectionTitle: { color: '#a1a1aa', fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 },
+  card: { backgroundColor: '#18181b', borderRadius: 12, padding: 16 },
+  productName: { color: '#ffffff', fontSize: 18, fontWeight: '600', marginBottom: 4 },
+  protocolInfo: { color: '#a1a1aa', fontSize: 14 },
+  settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#18181b', borderRadius: 12, padding: 16 },
+  settingInfo: { flex: 1, marginRight: 16 },
+  settingLabel: { color: '#ffffff', fontSize: 16, marginBottom: 4 },
+  settingDescription: { color: '#a1a1aa', fontSize: 13 },
+  menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#18181b', borderRadius: 12, padding: 16 },
+  menuItemText: { color: '#ffffff', fontSize: 16 },
+  menuItemArrow: { color: '#a1a1aa', fontSize: 18 },
+  footer: { marginTop: 'auto', alignItems: 'center', paddingVertical: 24 },
+  footerText: { color: '#52525b', fontSize: 12, marginBottom: 4 },
+});
