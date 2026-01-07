@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '../src/store/appStore';
+import { createEntry } from '../src/services/entryService';
 
 export default function EntryScreen() {
   const router = useRouter();
@@ -11,9 +12,30 @@ export default function EntryScreen() {
   const [clarity, setClarity] = useState(3);
   const [mood, setMood] = useState(3);
 
-  const handleSave = () => {
-    // TODO: Save entry to database
-    router.back();
+  const handleSave = async () => {
+    // Validate that we have an active protocol
+    if (!activeProtocol) {
+      Alert.alert('Error', 'No active protocol found');
+      return;
+    }
+
+    try {
+      // Save entry to database
+      await createEntry({
+        protocolId: activeProtocol.id,
+        dayNumber: activeProtocol.currentDay,
+        content: content,
+        energy: energy,
+        clarity: clarity,
+        mood: mood,
+      });
+
+      // Navigate back on success
+      router.back();
+    } catch (error) {
+      console.error('[EntryScreen] Failed to save entry:', error);
+      Alert.alert('Error', 'Failed to save entry. Please try again.');
+    }
   };
 
   return (
