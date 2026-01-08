@@ -20,25 +20,26 @@ export default function ScanScreen() {
 
       switch (result.type) {
         case 'known_bottle':
-          // Bottle exists - log dose and navigate to pre-dose check-in
+          // Bottle exists - welcome back the user
           if (result.protocol && result.bottle) {
-            try {
-              // Log the dose and get the dose record
-              const dose = await logDose(result.bottle.id, result.protocol.id);
-              
-              // Navigate to pre-dose check-in with dose ID
-              router.replace({
-                pathname: '/check-in/pre-dose',
-                params: { doseId: dose.id },
-              });
-            } catch (error) {
-              console.error('[ScanScreen] Failed to log dose:', error);
-              Alert.alert('Error', 'Failed to log dose. Please try again.');
-              setIsProcessing(false);
-            }
+            setActiveProtocol({
+              id: result.protocol.id,
+              sessionId: result.protocol.sessionId,
+              productId: result.protocol.productId,
+              productName: result.protocol.productName,
+              currentDay: result.protocol.currentDay,
+              totalDays: result.protocol.totalDays,
+              status: result.protocol.status,
+            });
+
+            Alert.alert(
+              'Welcome Back! 🍄',
+              `Day ${result.protocol.currentDay} of your ${result.protocol.productName} protocol.`,
+              [{ text: 'Continue', onPress: () => router.replace('/') }]
+            );
           } else {
             Alert.alert(
-              'Bottle Recognized',
+              'Welcome Back!',
               'This bottle was previously used. Start a new protocol?',
               [
                 { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
