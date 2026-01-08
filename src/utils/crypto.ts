@@ -1,16 +1,34 @@
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import type { SessionId, QRToken } from '../types';
 
 const DEVICE_ID_KEY = 'psilly_device_id';
 const SALT_KEY = 'psilly_salt';
+
+// Web fallback for SecureStore (which only works on native)
+const storage = {
+  setItem: async (key: string, value: string) => {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+    } else {
+      await SecureStore.setItemAsync(key, value);
+    }
+  },
+  getItem: async (key: string): Promise<string | null> => {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    }
+    return SecureStore.getItemAsync(key);
+  },
+};
 
 /**
  * Get or generate a unique device ID
  * Stored in SecureStore, persists across app reinstalls on same device
  */
 export async function getDeviceId(): Promise<string> {
-  let deviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+  let deviceId = await storage.getItem(DEVICE_ID_KEY);
 
   if (!deviceId) {
     // Generate new device ID
@@ -18,7 +36,7 @@ export async function getDeviceId(): Promise<string> {
       Crypto.CryptoDigestAlgorithm.SHA256,
       `device_${Date.now()}_${Math.random()}`
     );
-    await SecureStore.setItemAsync(DEVICE_ID_KEY, deviceId);
+    await storage.setItem(DEVICE_ID_KEY, deviceId);
   }
 
   return deviceId;
@@ -28,14 +46,14 @@ export async function getDeviceId(): Promise<string> {
  * Get or generate a salt for hashing
  */
 async function getSalt(): Promise<string> {
-  let salt = await SecureStore.getItemAsync(SALT_KEY);
+  let salt = await storage.getItem(SALT_KEY);
 
   if (!salt) {
     salt = await Crypto.digestStringAsync(
       Crypto.CryptoDigestAlgorithm.SHA256,
       `salt_${Date.now()}_${Math.random()}_${Math.random()}`
     );
-    await SecureStore.setItemAsync(SALT_KEY, salt);
+    await storage.setItem(SALT_KEY, salt);
   }
 
   return salt;
