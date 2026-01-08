@@ -74,10 +74,7 @@ export default function EntryDetailScreen() {
   });
   const timeString = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
-  let metrics = { energy: 3, clarity: 3, mood: 3 };
-  try {
-    metrics = JSON.parse(entry.metrics);
-  } catch {}
+  const metrics = entry.metrics;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

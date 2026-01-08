@@ -19,10 +19,14 @@ export async function createEntry(params: {
       e.protocolId = params.protocolId;
       e.dayNumber = params.dayNumber;
       e.content = params.content;
-      e.metrics = JSON.stringify(params.metrics);
+      // Set individual metric fields
+      e.energy = params.metrics.energy;
+      e.clarity = params.metrics.clarity;
+      e.mood = params.metrics.mood;
       e.isDoseDay = params.isDoseDay;
       e.tags = JSON.stringify(params.tags || []);
       e.timestamp = Date.now();
+      e.contributionStatus = 'pending';
     });
   });
 
@@ -68,7 +72,11 @@ export async function updateEntry(
   await database.write(async () => {
     await entry.update((e) => {
       if (updates.content !== undefined) e.content = updates.content;
-      if (updates.metrics !== undefined) e.metrics = JSON.stringify(updates.metrics);
+      if (updates.metrics !== undefined) {
+        e.energy = updates.metrics.energy;
+        e.clarity = updates.metrics.clarity;
+        e.mood = updates.metrics.mood;
+      }
       if (updates.tags !== undefined) e.tags = JSON.stringify(updates.tags);
     });
   });

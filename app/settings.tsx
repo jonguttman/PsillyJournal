@@ -1,9 +1,26 @@
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '../src/store/appStore';
 import * as SecureStore from 'expo-secure-store';
 import { STORAGE_KEYS } from '../src/config';
 import { useState, useEffect } from 'react';
+
+// Web fallback for SecureStore
+const storage = {
+  setItem: async (key: string, value: string) => {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+    } else {
+      await SecureStore.setItemAsync(key, value);
+    }
+  },
+  getItem: async (key: string): Promise<string | null> => {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    }
+    return SecureStore.getItemAsync(key);
+  },
+};
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -15,13 +32,13 @@ export default function SettingsScreen() {
   }, []);
 
   const loadRecoveryKey = async () => {
-    const key = await SecureStore.getItemAsync(STORAGE_KEYS.RECOVERY_KEY);
+    const key = await storage.getItem(STORAGE_KEYS.RECOVERY_KEY);
     setRecoveryKey(key);
   };
 
   const toggleOptIn = async (value: boolean) => {
     setOptedIn(value);
-    await SecureStore.setItemAsync(STORAGE_KEYS.HAS_OPTED_IN, value ? 'true' : 'false');
+    await storage.setItem(STORAGE_KEYS.HAS_OPTED_IN, value ? 'true' : 'false');
   };
 
   const showRecoveryKey = () => {

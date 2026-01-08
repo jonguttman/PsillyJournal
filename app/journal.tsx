@@ -80,24 +80,17 @@ export default function JournalScreen() {
         </View>
       ) : (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-          {entries.map((entry) => {
-            let metrics = { energy: 3, clarity: 3, mood: 3 };
-            try {
-              metrics = JSON.parse(entry.metrics);
-            } catch {}
-
-            return (
-              <EntryCard
-                key={entry.id}
-                dayNumber={entry.dayNumber}
-                timestamp={entry.timestamp}
-                content={entry.content}
-                metrics={metrics}
-                isDoseDay={entry.isDoseDay}
-                onPress={() => router.push(`/entry/${entry.id}`)}
-              />
-            );
-          })}
+          {entries.map((entry) => (
+            <EntryCard
+              key={entry.id}
+              dayNumber={entry.dayNumber}
+              timestamp={entry.timestamp}
+              content={entry.content}
+              metrics={entry.metrics}
+              isDoseDay={entry.isDoseDay}
+              onPress={() => router.push(`/entry/${entry.id}`)}
+            />
+          ))}
         </ScrollView>
       )}
     </View>

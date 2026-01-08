@@ -125,7 +125,6 @@ function RootLayoutContent() {
         <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="journal" />
-        <Stack.Screen name="entry" />
         <Stack.Screen name="settings" />
       </Stack>
     </>

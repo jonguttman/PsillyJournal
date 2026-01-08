@@ -140,24 +140,17 @@ export default function HomeScreen() {
                 </View>
               ) : (
                 <View>
-                  {recentEntries.map((entry) => {
-                    let metrics = { energy: 3, clarity: 3, mood: 3 };
-                    try {
-                      metrics = JSON.parse(entry.metrics);
-                    } catch {}
-
-                    return (
-                      <EntryCard
-                        key={entry.id}
-                        dayNumber={entry.dayNumber}
-                        timestamp={entry.timestamp}
-                        content={entry.content}
-                        metrics={metrics}
-                        isDoseDay={entry.isDoseDay}
-                        onPress={() => router.push(`/entry/${entry.id}`)}
-                      />
-                    );
-                  })}
+                  {recentEntries.map((entry) => (
+                    <EntryCard
+                      key={entry.id}
+                      dayNumber={entry.dayNumber}
+                      timestamp={entry.timestamp}
+                      content={entry.content}
+                      metrics={entry.metrics}
+                      isDoseDay={entry.isDoseDay}
+                      onPress={() => router.push(`/entry/${entry.id}`)}
+                    />
+                  ))}
                 </View>
               )}
             </View>
