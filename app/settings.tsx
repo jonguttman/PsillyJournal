@@ -26,6 +26,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { hasOptedIn, setOptedIn, activeProtocol } = useAppStore();
   const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
+  const [showKey, setShowKey] = useState(false);
 
   useEffect(() => {
     loadRecoveryKey();
@@ -33,6 +34,7 @@ export default function SettingsScreen() {
 
   const loadRecoveryKey = async () => {
     const key = await storage.getItem(STORAGE_KEYS.RECOVERY_KEY);
+    console.log('[Settings] Recovery key loaded:', key ? 'exists' : 'null');
     setRecoveryKey(key);
   };
 
@@ -41,10 +43,12 @@ export default function SettingsScreen() {
     await storage.setItem(STORAGE_KEYS.HAS_OPTED_IN, value ? 'true' : 'false');
   };
 
-  const showRecoveryKey = () => {
-    if (recoveryKey) {
-      Alert.alert('Recovery Key', recoveryKey, [{ text: 'OK' }]);
+  const toggleRecoveryKey = () => {
+    if (!recoveryKey) {
+      Alert.alert('No Recovery Key', 'No recovery key found. Please complete onboarding first.');
+      return;
     }
+    setShowKey(!showKey);
   };
 
   return (
@@ -90,10 +94,21 @@ export default function SettingsScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
-          <TouchableOpacity style={styles.menuItem} onPress={showRecoveryKey}>
-            <Text style={styles.menuItemText}>View Recovery Key</Text>
-            <Text style={styles.menuItemArrow}>→</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={toggleRecoveryKey}>
+            <Text style={styles.menuItemText}>
+              {showKey ? 'Hide Recovery Key' : 'View Recovery Key'}
+            </Text>
+            <Text style={styles.menuItemArrow}>{showKey ? '▼' : '→'}</Text>
           </TouchableOpacity>
+          {showKey && recoveryKey && (
+            <View style={styles.keyCard}>
+              <Text style={styles.keyLabel}>Your Recovery Key:</Text>
+              <Text style={styles.keyText}>{recoveryKey}</Text>
+              <Text style={styles.keyWarning}>
+                Save this key securely. You'll need it to restore your data.
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.footer}>
@@ -124,6 +139,10 @@ const styles = StyleSheet.create({
   menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#18181b', borderRadius: 12, padding: 16 },
   menuItemText: { color: '#ffffff', fontSize: 16 },
   menuItemArrow: { color: '#a1a1aa', fontSize: 18 },
+  keyCard: { backgroundColor: '#18181b', borderRadius: 12, padding: 20, marginTop: 12 },
+  keyLabel: { color: '#a1a1aa', fontSize: 12, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
+  keyText: { color: '#8b5cf6', fontSize: 18, fontWeight: '600', fontFamily: 'monospace', letterSpacing: 2, marginBottom: 12 },
+  keyWarning: { color: '#71717a', fontSize: 13, lineHeight: 18 },
   footer: { marginTop: 'auto', alignItems: 'center', paddingVertical: 24 },
   footerText: { color: '#52525b', fontSize: 12, marginBottom: 4 },
 });
