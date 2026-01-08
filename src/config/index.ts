@@ -7,9 +7,10 @@
 // API Configuration
 export const API_CONFIG = {
   // Our backend (Vercel)
-  BASE_URL: __DEV__ 
-    ? 'http://localhost:3000/api' 
-    : 'https://journal.originalpsilly.com/api',
+  // Use relative URL in production so it works on any domain
+  BASE_URL: __DEV__
+    ? 'http://localhost:3000/api'
+    : '/api',
 
   // PsillyOps Internal API (product lookup)
   // Server-to-server only — calls proxied through our backend

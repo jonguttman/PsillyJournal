@@ -118,7 +118,7 @@ export async function fetchProductInfo(token: QRToken): Promise<ProductInfo | nu
     const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
 
     const response = await fetch(
-      `${API_CONFIG.PSILLYOPS_INTERNAL_API}/by-qr/${token}`,
+      `${API_CONFIG.BASE_URL}/products/by-qr/${token}`,
       {
         method: 'GET',
         headers: {
