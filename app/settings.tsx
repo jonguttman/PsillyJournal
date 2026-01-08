@@ -4,6 +4,7 @@ import { useAppStore } from '../src/store/appStore';
 import * as SecureStore from 'expo-secure-store';
 import { STORAGE_KEYS } from '../src/config';
 import { useState, useEffect } from 'react';
+import { localStorageDB } from '../src/db/localStorageDB';
 
 // Web fallback for SecureStore
 const storage = {
@@ -49,6 +50,53 @@ export default function SettingsScreen() {
       return;
     }
     setShowKey(!showKey);
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Log Out',
+      'This will delete all your local data including protocols, entries, and bottles. This cannot be undone.\n\nMake sure you have saved your recovery key if you want to restore your data later.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Clear all database data
+              localStorageDB.clearAll();
+
+              // Clear storage keys
+              if (Platform.OS === 'web') {
+                localStorage.removeItem(STORAGE_KEYS.RECOVERY_KEY);
+                localStorage.removeItem(STORAGE_KEYS.ONBOARDING_COMPLETE);
+                localStorage.removeItem(STORAGE_KEYS.HAS_OPTED_IN);
+              } else {
+                await SecureStore.deleteItemAsync(STORAGE_KEYS.RECOVERY_KEY);
+                await SecureStore.deleteItemAsync(STORAGE_KEYS.ONBOARDING_COMPLETE);
+                await SecureStore.deleteItemAsync(STORAGE_KEYS.HAS_OPTED_IN);
+              }
+
+              // Clear app store state
+              setOptedIn(false);
+              useAppStore.setState({
+                activeProtocol: null,
+                hasCompletedOnboarding: false,
+                hasOptedIn: false,
+              });
+
+              console.log('[Settings] Logged out successfully');
+
+              // Navigate to home (will trigger onboarding)
+              router.replace('/');
+            } catch (error) {
+              console.error('[Settings] Error during logout:', error);
+              Alert.alert('Error', 'Failed to log out. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -111,6 +159,17 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Danger Zone</Text>
+          <TouchableOpacity style={styles.dangerMenuItem} onPress={handleLogout}>
+            <Text style={styles.dangerMenuItemText}>Log Out</Text>
+            <Text style={styles.menuItemArrow}>→</Text>
+          </TouchableOpacity>
+          <Text style={styles.dangerWarning}>
+            This will permanently delete all your local data. Make sure you have your recovery key saved.
+          </Text>
+        </View>
+
         <View style={styles.footer}>
           <Text style={styles.footerText}>Psilly Journal v1.0.0</Text>
           <Text style={styles.footerText}>Your data never leaves your device</Text>
@@ -143,6 +202,9 @@ const styles = StyleSheet.create({
   keyLabel: { color: '#a1a1aa', fontSize: 12, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
   keyText: { color: '#8b5cf6', fontSize: 18, fontWeight: '600', fontFamily: 'monospace', letterSpacing: 2, marginBottom: 12 },
   keyWarning: { color: '#71717a', fontSize: 13, lineHeight: 18 },
+  dangerMenuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#18181b', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#ef444420' },
+  dangerMenuItemText: { color: '#ef4444', fontSize: 16, fontWeight: '500' },
+  dangerWarning: { color: '#71717a', fontSize: 12, marginTop: 8, lineHeight: 16 },
   footer: { marginTop: 'auto', alignItems: 'center', paddingVertical: 24 },
   footerText: { color: '#52525b', fontSize: 12, marginBottom: 4 },
 });

@@ -1,24 +1,26 @@
 import { useState, useEffect } from 'react';
-import { Q } from '@nozbe/watermelondb';
-import database from '../db';
-import type Protocol from '../db/models/Protocol';
+import { localStorageDB, type Protocol } from '../db/localStorageDB';
 
 export function useActiveProtocol() {
   const [protocol, setProtocol] = useState<Protocol | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const subscription = database
-      .get<Protocol>('protocols')
-      .query(Q.where('status', 'active'))
-      .observe()
-      .subscribe((protocols) => {
-        const active = protocols.find((p) => p.status === 'active');
-        setProtocol(active || null);
-        setIsLoading(false);
-      });
+    // Load active protocol on mount
+    const loadProtocol = () => {
+      const protocols = localStorageDB.protocols.query(p => p.status === 'active');
+      const active = protocols.length > 0 ? protocols[0] : null;
+      setProtocol(active);
+      setIsLoading(false);
+    };
 
-    return () => subscription.unsubscribe();
+    loadProtocol();
+
+    // Poll for changes every 2 seconds (simple approach for localStorage)
+    // In a production app, you might want to use a more sophisticated state management
+    const interval = setInterval(loadProtocol, 2000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return { protocol, isLoading };

@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getEntryById, deleteEntry } from '../../src/services/entryService';
-import type Entry from '../../src/db/models/Entry';
+import type { Entry } from '../../src/db/localStorageDB';
+import { getEntryMetrics } from '../../src/db/localStorageDB';
 
 export default function EntryDetailScreen() {
   const router = useRouter();
@@ -74,7 +75,7 @@ export default function EntryDetailScreen() {
   });
   const timeString = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
-  const metrics = entry.metrics;
+  const metrics = getEntryMetrics(entry);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

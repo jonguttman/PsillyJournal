@@ -7,18 +7,22 @@ import { Bottle, Protocol, Entry, Dose, SyncQueue } from './models';
 /**
  * Initialize WatermelonDB with LokiJS adapter
  *
- * LokiJS is used for React Native as it's pure JS and works
- * across all platforms. For production, consider SQLite adapter
- * for better performance with large datasets.
+ * CRITICAL: LokiJS on web has persistence issues with IndexedDB.
+ * The adapter keeps resetting the database on page load.
+ * These settings attempt to prevent that, but may not be sufficient.
  */
 const adapter = new LokiJSAdapter({
   schema,
   useWebWorker: false,
   useIncrementalIndexedDB: true,
   dbName: 'psillyjournal',
-  // Disable autosave to prevent race conditions
   autosave: true,
-  autosaveInterval: 1000,
+  autosaveInterval: 250, // Save every 250ms
+  // Prevent destructive resets
+  extraIncrementalIDBOptions: {
+    onDidOverwrite: () => console.log('[🍉] [Loki] Database overwritten'),
+    onversionchange: () => console.log('[🍉] [Loki] Version changed'),
+  },
 });
 
 // Create database instance

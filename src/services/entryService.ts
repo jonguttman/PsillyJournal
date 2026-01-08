@@ -1,6 +1,4 @@
-import { Q } from '@nozbe/watermelondb';
-import database from '../db';
-import type Entry from '../db/models/Entry';
+import { localStorageDB, type Entry } from '../db/localStorageDB';
 import type { ReflectionMetrics } from '../types';
 
 /**
@@ -14,20 +12,17 @@ export async function createEntry(params: {
   isDoseDay: boolean;
   tags?: string[];
 }): Promise<Entry> {
-  const entry = await database.write(async () => {
-    return database.get<Entry>('entries').create((e) => {
-      e.protocolId = params.protocolId;
-      e.dayNumber = params.dayNumber;
-      e.content = params.content;
-      // Set individual metric fields
-      e.energy = params.metrics.energy;
-      e.clarity = params.metrics.clarity;
-      e.mood = params.metrics.mood;
-      e.isDoseDay = params.isDoseDay;
-      e.tags = JSON.stringify(params.tags || []);
-      e.timestamp = Date.now();
-      e.contributionStatus = 'pending';
-    });
+  const entry = localStorageDB.entries.create({
+    protocolId: params.protocolId,
+    dayNumber: params.dayNumber,
+    content: params.content,
+    energy: params.metrics.energy,
+    clarity: params.metrics.clarity,
+    mood: params.metrics.mood,
+    isDoseDay: params.isDoseDay,
+    tags: JSON.stringify(params.tags || []),
+    timestamp: Date.now(),
+    contributionStatus: 'pending',
   });
 
   return entry;
@@ -37,11 +32,7 @@ export async function createEntry(params: {
  * Get all entries for a protocol, newest first
  */
 export async function getEntriesForProtocol(protocolId: string): Promise<Entry[]> {
-  const entries = await database
-    .get<Entry>('entries')
-    .query(Q.where('protocol_id', protocolId))
-    .fetch();
-
+  const entries = localStorageDB.entries.query(e => e.protocolId === protocolId);
   return entries.sort((a, b) => b.timestamp - a.timestamp);
 }
 
@@ -49,11 +40,7 @@ export async function getEntriesForProtocol(protocolId: string): Promise<Entry[]
  * Get a single entry by ID
  */
 export async function getEntryById(entryId: string): Promise<Entry | null> {
-  try {
-    return await database.get<Entry>('entries').find(entryId);
-  } catch {
-    return null;
-  }
+  return localStorageDB.entries.find(entryId);
 }
 
 /**
@@ -66,32 +53,25 @@ export async function updateEntry(
     metrics?: ReflectionMetrics;
     tags?: string[];
   }
-): Promise<Entry> {
-  const entry = await database.get<Entry>('entries').find(entryId);
+): Promise<Entry | null> {
+  const updateData: Partial<Entry> = {};
 
-  await database.write(async () => {
-    await entry.update((e) => {
-      if (updates.content !== undefined) e.content = updates.content;
-      if (updates.metrics !== undefined) {
-        e.energy = updates.metrics.energy;
-        e.clarity = updates.metrics.clarity;
-        e.mood = updates.metrics.mood;
-      }
-      if (updates.tags !== undefined) e.tags = JSON.stringify(updates.tags);
-    });
-  });
+  if (updates.content !== undefined) updateData.content = updates.content;
+  if (updates.metrics !== undefined) {
+    updateData.energy = updates.metrics.energy;
+    updateData.clarity = updates.metrics.clarity;
+    updateData.mood = updates.metrics.mood;
+  }
+  if (updates.tags !== undefined) updateData.tags = JSON.stringify(updates.tags);
 
-  return entry;
+  return localStorageDB.entries.update(entryId, updateData);
 }
 
 /**
  * Delete an entry
  */
 export async function deleteEntry(entryId: string): Promise<void> {
-  await database.write(async () => {
-    const entry = await database.get<Entry>('entries').find(entryId);
-    await entry.destroyPermanently();
-  });
+  localStorageDB.entries.delete(entryId);
 }
 
 /**
