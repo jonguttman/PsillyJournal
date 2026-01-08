@@ -16,6 +16,9 @@ const adapter = new LokiJSAdapter({
   useWebWorker: false,
   useIncrementalIndexedDB: true,
   dbName: 'psillyjournal',
+  // Disable autosave to prevent race conditions
+  autosave: true,
+  autosaveInterval: 1000,
 });
 
 // Create database instance
