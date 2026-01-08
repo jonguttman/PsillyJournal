@@ -15,14 +15,7 @@ const adapter = new LokiJSAdapter({
   schema,
   useWebWorker: false,
   useIncrementalIndexedDB: true,
-  // CRITICAL: Add migration steps for schema version 2
-  // This prevents database reset on schema changes
-  migrations: {
-    migrations: [
-      // Migration from v1 to v2 (if user had v1 data)
-      // Empty migration - v2 is the baseline for new users
-    ],
-  },
+  dbName: 'psillyjournal',
 });
 
 // Create database instance
