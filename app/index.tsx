@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -8,8 +8,11 @@ import {
   DoseSuccessToast,
   ConfirmDoseModal,
   EmptyProtocolCard,
+  EntryCard,
 } from '../src/components';
 import { useActiveProtocol, useDoseTracking } from '../src/hooks';
+import { getRecentEntries } from '../src/services/entryService';
+import type Entry from '../src/db/models/Entry';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -19,6 +22,23 @@ export default function HomeScreen() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [lastDoseTime, setLastDoseTime] = useState<Date | null>(null);
+  const [recentEntries, setRecentEntries] = useState<Entry[]>([]);
+
+  useEffect(() => {
+    if (protocol) {
+      loadRecentEntries();
+    }
+  }, [protocol]);
+
+  const loadRecentEntries = async () => {
+    if (!protocol) return;
+    try {
+      const entries = await getRecentEntries(protocol.id, 3);
+      setRecentEntries(entries);
+    } catch (error) {
+      console.error('[Home] Error loading entries:', error);
+    }
+  };
 
   const onDosePress = () => {
     if (doseCountToday > 0) {
@@ -96,7 +116,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.actionButton}
-                onPress={() => router.push('/entry')}
+                onPress={() => router.push('/entry/new')}
               >
                 <Text style={styles.actionIcon}>✏️</Text>
                 <Text style={styles.actionText}>New Entry</Text>
@@ -111,12 +131,35 @@ export default function HomeScreen() {
                   <Text style={styles.viewAll}>View All →</Text>
                 </TouchableOpacity>
               </View>
-              <View style={styles.emptyEntries}>
-                <Text style={styles.emptyText}>No entries yet</Text>
-                <Text style={styles.emptySubtext}>
-                  Tap "New Entry" to record your first reflection
-                </Text>
-              </View>
+              {recentEntries.length === 0 ? (
+                <View style={styles.emptyEntries}>
+                  <Text style={styles.emptyText}>No entries yet</Text>
+                  <Text style={styles.emptySubtext}>
+                    Tap "New Entry" to record your first reflection
+                  </Text>
+                </View>
+              ) : (
+                <View>
+                  {recentEntries.map((entry) => {
+                    let metrics = { energy: 3, clarity: 3, mood: 3 };
+                    try {
+                      metrics = JSON.parse(entry.metrics);
+                    } catch {}
+
+                    return (
+                      <EntryCard
+                        key={entry.id}
+                        dayNumber={entry.dayNumber}
+                        timestamp={entry.timestamp}
+                        content={entry.content}
+                        metrics={metrics}
+                        isDoseDay={entry.isDoseDay}
+                        onPress={() => router.push(`/entry/${entry.id}`)}
+                      />
+                    );
+                  })}
+                </View>
+              )}
             </View>
           </>
         ) : (
