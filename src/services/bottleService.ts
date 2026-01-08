@@ -27,16 +27,22 @@ export interface ScanHandlerResult {
  */
 export async function handleScannedToken(token: QRToken): Promise<ScanHandlerResult> {
   try {
+    console.log('[BottleService] Handling scanned token:', token);
+
     // 1. Check if bottle exists in local database
     const existingBottle = await database
       .get<Bottle>('bottles')
       .query(Q.where('bottle_token', token))
       .fetch();
 
+    console.log('[BottleService] Query result:', existingBottle.length, 'bottles found');
+
     if (existingBottle.length > 0) {
+      console.log('[BottleService] Known bottle found:', existingBottle[0].id);
       // Known bottle - handle dose logging
       return handleKnownBottle(existingBottle[0]);
     } else {
+      console.log('[BottleService] New bottle - fetching product info');
       // New bottle - fetch product info and prompt
       return handleNewBottle(token);
     }
@@ -141,6 +147,8 @@ export async function createBottleAndProtocol(
   token: QRToken,
   productInfo: ProductInfo
 ): Promise<{ bottle: Bottle; protocol: Protocol }> {
+  console.log('[BottleService] Creating bottle and protocol for token:', token);
+
   // Generate anonymous session ID
   const sessionId = await generateSessionId(token);
 
@@ -156,6 +164,8 @@ export async function createBottleAndProtocol(
       b.scanCount = 1;
     });
 
+    console.log('[BottleService] Bottle created:', bottle.id, 'with token:', bottle.bottleToken);
+
     // Create protocol record
     const protocol = await database.get<Protocol>('protocols').create((p) => {
       p.bottleId = bottle.id;
@@ -168,6 +178,8 @@ export async function createBottleAndProtocol(
       p.totalDays = PROTOCOL_DEFAULTS.DURATION_DAYS;
       p.currentDay = 1;
     });
+
+    console.log('[BottleService] Protocol created:', protocol.id);
 
     return { bottle, protocol };
   });
