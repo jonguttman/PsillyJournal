@@ -71,10 +71,14 @@ export default function SettingsScreen() {
                 localStorage.removeItem(STORAGE_KEYS.RECOVERY_KEY);
                 localStorage.removeItem(STORAGE_KEYS.ONBOARDING_COMPLETE);
                 localStorage.removeItem(STORAGE_KEYS.HAS_OPTED_IN);
+                localStorage.removeItem(STORAGE_KEYS.DEVICE_ID);
+                localStorage.removeItem(STORAGE_KEYS.SALT);
               } else {
                 await SecureStore.deleteItemAsync(STORAGE_KEYS.RECOVERY_KEY);
                 await SecureStore.deleteItemAsync(STORAGE_KEYS.ONBOARDING_COMPLETE);
                 await SecureStore.deleteItemAsync(STORAGE_KEYS.HAS_OPTED_IN);
+                await SecureStore.deleteItemAsync(STORAGE_KEYS.DEVICE_ID);
+                await SecureStore.deleteItemAsync(STORAGE_KEYS.SALT);
               }
 
               // Clear app store state
@@ -87,8 +91,8 @@ export default function SettingsScreen() {
 
               console.log('[Settings] Logged out successfully');
 
-              // Navigate to home (will trigger onboarding)
-              router.replace('/');
+              // Navigate to scan screen to start fresh
+              router.replace('/scan');
             } catch (error) {
               console.error('[Settings] Error during logout:', error);
               Alert.alert('Error', 'Failed to log out. Please try again.');
