@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type Protocol from '../db/models/Protocol';
-import type Dose from '../db/models/Dose';
+import type { Protocol, Dose } from '../db/localStorageDB';
 import { logDose, deleteDose, getDoseCountToday } from '../services/doseService';
 
 interface UseDoseTrackingResult {

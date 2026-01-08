@@ -11,7 +11,8 @@ import { useRouter } from 'expo-router';
 import { useActiveProtocol } from '../src/hooks';
 import { getEntriesForProtocol } from '../src/services/entryService';
 import { EntryCard } from '../src/components';
-import type Entry from '../src/db/models/Entry';
+import type { Entry } from '../src/db/localStorageDB';
+import { getEntryMetrics } from '../src/db/localStorageDB';
 
 export default function JournalScreen() {
   const router = useRouter();
@@ -86,7 +87,7 @@ export default function JournalScreen() {
               dayNumber={entry.dayNumber}
               timestamp={entry.timestamp}
               content={entry.content}
-              metrics={entry.metrics}
+              metrics={getEntryMetrics(entry)}
               isDoseDay={entry.isDoseDay}
               onPress={() => router.push(`/entry/${entry.id}`)}
             />

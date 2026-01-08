@@ -12,7 +12,8 @@ import {
 } from '../src/components';
 import { useActiveProtocol, useDoseTracking } from '../src/hooks';
 import { getRecentEntries } from '../src/services/entryService';
-import type Entry from '../src/db/models/Entry';
+import type { Entry } from '../src/db/localStorageDB';
+import { getEntryMetrics } from '../src/db/localStorageDB';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -146,7 +147,7 @@ export default function HomeScreen() {
                       dayNumber={entry.dayNumber}
                       timestamp={entry.timestamp}
                       content={entry.content}
-                      metrics={entry.metrics}
+                      metrics={getEntryMetrics(entry)}
                       isDoseDay={entry.isDoseDay}
                       onPress={() => router.push(`/entry/${entry.id}`)}
                     />

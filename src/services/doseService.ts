@@ -1,7 +1,4 @@
-import { Q } from '@nozbe/watermelondb';
-import database from '../db';
-import type Dose from '../db/models/Dose';
-import type Protocol from '../db/models/Protocol';
+import { localStorageDB, type Dose, type Protocol } from '../db/localStorageDB';
 
 /**
  * Get the start of today (midnight) in milliseconds
@@ -17,15 +14,9 @@ function getStartOfToday(): number {
  */
 export async function getDosesToday(protocolId: string): Promise<Dose[]> {
   const startOfDay = getStartOfToday();
-
-  const doses = await database
-    .get<Dose>('doses')
-    .query(
-      Q.where('protocol_id', protocolId),
-      Q.where('timestamp', Q.gte(startOfDay))
-    )
-    .fetch();
-
+  const doses = localStorageDB.doses.query(
+    d => d.protocolId === protocolId && d.timestamp >= startOfDay
+  );
   return doses;
 }
 
@@ -35,15 +26,11 @@ export async function getDosesToday(protocolId: string): Promise<Dose[]> {
 export async function logDose(protocol: Protocol): Promise<Dose> {
   const timestamp = Date.now();
 
-  const dose = await database.write(async () => {
-    const newDose = await database.get<Dose>('doses').create((d) => {
-      d.protocolId = protocol.id;
-      d.bottleId = protocol.bottleId;
-      d.timestamp = timestamp;
-      d.dayNumber = protocol.currentDay;
-    });
-
-    return newDose;
+  const dose = localStorageDB.doses.create({
+    protocolId: protocol.id,
+    bottleId: protocol.bottleId,
+    timestamp: timestamp,
+    dayNumber: protocol.currentDay,
   });
 
   return dose;
@@ -53,10 +40,7 @@ export async function logDose(protocol: Protocol): Promise<Dose> {
  * Delete a dose (for undo functionality)
  */
 export async function deleteDose(doseId: string): Promise<void> {
-  await database.write(async () => {
-    const dose = await database.get<Dose>('doses').find(doseId);
-    await dose.destroyPermanently();
-  });
+  localStorageDB.doses.delete(doseId);
 }
 
 /**

@@ -1,6 +1,4 @@
-import { Q } from '@nozbe/watermelondb';
-import database from '../db';
-import { Bottle, Protocol, Dose } from '../db/models';
+import { localStorageDB, type Bottle, type Protocol, type Dose } from '../db/localStorageDB';
 import { fetchProductInfo } from './productApi';
 import { generateSessionId } from '../utils/crypto';
 import { PROTOCOL_DEFAULTS } from '../config';
@@ -30,17 +28,14 @@ export async function handleScannedToken(token: QRToken): Promise<ScanHandlerRes
     console.log('[BottleService] Handling scanned token:', token);
 
     // 1. Check if bottle exists in local database
-    const existingBottle = await database
-      .get<Bottle>('bottles')
-      .query(Q.where('bottle_token', token))
-      .fetch();
+    const existingBottles = localStorageDB.bottles.query(b => b.bottleToken === token);
 
-    console.log('[BottleService] Query result:', existingBottle.length, 'bottles found');
+    console.log('[BottleService] Query result:', existingBottles.length, 'bottles found');
 
-    if (existingBottle.length > 0) {
-      console.log('[BottleService] Known bottle found:', existingBottle[0].id);
+    if (existingBottles.length > 0) {
+      console.log('[BottleService] Known bottle found:', existingBottles[0].id);
       // Known bottle - handle dose logging
-      return handleKnownBottle(existingBottle[0]);
+      return handleKnownBottle(existingBottles[0]);
     } else {
       console.log('[BottleService] New bottle - fetching product info');
       // New bottle - fetch product info and prompt
@@ -61,16 +56,15 @@ export async function handleScannedToken(token: QRToken): Promise<ScanHandlerRes
 async function handleKnownBottle(bottle: Bottle): Promise<ScanHandlerResult> {
   try {
     // Record the scan
-    await bottle.recordScan();
+    localStorageDB.bottles.update(bottle.id, {
+      lastScannedAt: Date.now(),
+      scanCount: bottle.scanCount + 1,
+    });
 
     // Get active protocol for this bottle
-    const protocols = await database
-      .get<Protocol>('protocols')
-      .query(
-        Q.where('bottle_id', bottle.id),
-        Q.where('status', 'active')
-      )
-      .fetch();
+    const protocols = localStorageDB.protocols.query(
+      p => p.bottleId === bottle.id && p.status === 'active'
+    );
 
     if (protocols.length > 0) {
       return {
@@ -110,10 +104,7 @@ async function handleNewBottle(token: QRToken): Promise<ScanHandlerResult> {
     }
 
     // Check for existing active protocols
-    const activeProtocols = await database
-      .get<Protocol>('protocols')
-      .query(Q.where('status', 'active'))
-      .fetch();
+    const activeProtocols = localStorageDB.protocols.query(p => p.status === 'active');
 
     if (activeProtocols.length > 0) {
       // User has existing protocol - this is a product switch
@@ -152,39 +143,35 @@ export async function createBottleAndProtocol(
   // Generate anonymous session ID
   const sessionId = await generateSessionId(token);
 
-  const result = await database.write(async () => {
-    // Create bottle record
-    const bottle = await database.get<Bottle>('bottles').create((b) => {
-      b.bottleToken = token;
-      b.productId = productInfo.product_id;
-      b.productName = productInfo.name;
-      b.batchId = productInfo.batch_id ?? undefined;
-      b.firstScannedAt = Date.now();
-      b.lastScannedAt = Date.now();
-      b.scanCount = 1;
-    });
-
-    console.log('[BottleService] Bottle created:', bottle.id, 'with token:', bottle.bottleToken);
-
-    // Create protocol record
-    const protocol = await database.get<Protocol>('protocols').create((p) => {
-      p.bottleId = bottle.id;
-      p.sessionId = sessionId;
-      p.productId = productInfo.product_id;
-      p.productName = productInfo.name;
-      p.startDate = Date.now();
-      p.status = 'active';
-      p.scheduleType = PROTOCOL_DEFAULTS.SCHEDULE;
-      p.totalDays = PROTOCOL_DEFAULTS.DURATION_DAYS;
-      p.currentDay = 1;
-    });
-
-    console.log('[BottleService] Protocol created:', protocol.id);
-
-    return { bottle, protocol };
+  // Create bottle record
+  const bottle = localStorageDB.bottles.create({
+    bottleToken: token,
+    productId: productInfo.product_id,
+    productName: productInfo.name,
+    batchId: productInfo.batch_id ?? undefined,
+    firstScannedAt: Date.now(),
+    lastScannedAt: Date.now(),
+    scanCount: 1,
   });
 
-  return result;
+  console.log('[BottleService] Bottle created:', bottle.id, 'with token:', bottle.bottleToken);
+
+  // Create protocol record
+  const protocol = localStorageDB.protocols.create({
+    bottleId: bottle.id,
+    sessionId: sessionId,
+    productId: productInfo.product_id,
+    productName: productInfo.name,
+    startDate: Date.now(),
+    status: 'active',
+    scheduleType: PROTOCOL_DEFAULTS.SCHEDULE,
+    totalDays: PROTOCOL_DEFAULTS.DURATION_DAYS,
+    currentDay: 1,
+  });
+
+  console.log('[BottleService] Protocol created:', protocol.id);
+
+  return { bottle, protocol };
 }
 
 /**
@@ -198,49 +185,41 @@ export async function switchProduct(
   // Generate new session ID for new protocol
   const sessionId = await generateSessionId(token);
 
-  const result = await database.write(async () => {
-    // Pause current protocol (don't delete - preserve history)
-    await currentProtocol.pause();
+  // Pause current protocol (don't delete - preserve history)
+  localStorageDB.protocols.update(currentProtocol.id, { status: 'paused' });
 
-    // Create new bottle record
-    const bottle = await database.get<Bottle>('bottles').create((b) => {
-      b.bottleToken = token;
-      b.productId = productInfo.product_id;
-      b.productName = productInfo.name;
-      b.batchId = productInfo.batch_id ?? undefined;
-      b.firstScannedAt = Date.now();
-      b.lastScannedAt = Date.now();
-      b.scanCount = 1;
-    });
-
-    // Create new protocol
-    const protocol = await database.get<Protocol>('protocols').create((p) => {
-      p.bottleId = bottle.id;
-      p.sessionId = sessionId;
-      p.productId = productInfo.product_id;
-      p.productName = productInfo.name;
-      p.startDate = Date.now();
-      p.status = 'active';
-      p.scheduleType = PROTOCOL_DEFAULTS.SCHEDULE;
-      p.totalDays = PROTOCOL_DEFAULTS.DURATION_DAYS;
-      p.currentDay = 1;
-    });
-
-    return { bottle, protocol };
+  // Create new bottle record
+  const bottle = localStorageDB.bottles.create({
+    bottleToken: token,
+    productId: productInfo.product_id,
+    productName: productInfo.name,
+    batchId: productInfo.batch_id ?? undefined,
+    firstScannedAt: Date.now(),
+    lastScannedAt: Date.now(),
+    scanCount: 1,
   });
 
-  return result;
+  // Create new protocol
+  const protocol = localStorageDB.protocols.create({
+    bottleId: bottle.id,
+    sessionId: sessionId,
+    productId: productInfo.product_id,
+    productName: productInfo.name,
+    startDate: Date.now(),
+    status: 'active',
+    scheduleType: PROTOCOL_DEFAULTS.SCHEDULE,
+    totalDays: PROTOCOL_DEFAULTS.DURATION_DAYS,
+    currentDay: 1,
+  });
+
+  return { bottle, protocol };
 }
 
 /**
  * Get the currently active protocol
  */
 export async function getActiveProtocol(): Promise<Protocol | null> {
-  const protocols = await database
-    .get<Protocol>('protocols')
-    .query(Q.where('status', 'active'))
-    .fetch();
-
+  const protocols = localStorageDB.protocols.query(p => p.status === 'active');
   return protocols.length > 0 ? protocols[0] : null;
 }
 
@@ -248,34 +227,29 @@ export async function getActiveProtocol(): Promise<Protocol | null> {
  * Get all protocols (for history view)
  */
 export async function getAllProtocols(): Promise<Protocol[]> {
-  return database
-    .get<Protocol>('protocols')
-    .query(Q.sortBy('start_date', Q.desc))
-    .fetch();
+  const protocols = localStorageDB.protocols.getAll();
+  return protocols.sort((a, b) => b.startDate - a.startDate);
 }
 
 /**
  * Log a dose for a bottle/protocol
- * 
+ *
  * Creates a new Dose record with timestamp and day number.
  * Returns the created dose for linking to check-in entry.
- * 
+ *
  * @param bottleId - ID of the bottle being used
  * @param protocolId - ID of the active protocol
  * @returns The created Dose record
  */
 export async function logDose(bottleId: string, protocolId: string): Promise<Dose> {
-  const protocol = await database.get<Protocol>('protocols').find(protocolId);
-  
-  const dose = await database.write(async () => {
-    const newDose = await database.get<Dose>('doses').create((d) => {
-      d.protocolId = protocolId;
-      d.bottleId = bottleId;
-      d.timestamp = Date.now();
-      d.dayNumber = protocol.currentDay;
-    });
+  const protocol = localStorageDB.protocols.find(protocolId);
+  if (!protocol) throw new Error('Protocol not found');
 
-    return newDose;
+  const dose = localStorageDB.doses.create({
+    protocolId: protocolId,
+    bottleId: bottleId,
+    timestamp: Date.now(),
+    dayNumber: protocol.currentDay,
   });
 
   console.log(`[BottleService] Logged dose for day ${protocol.currentDay}`);
@@ -286,27 +260,14 @@ export async function logDose(bottleId: string, protocolId: string): Promise<Dos
  * Get doses for a protocol
  */
 export async function getDosesForProtocol(protocolId: string): Promise<Dose[]> {
-  return database
-    .get<Dose>('doses')
-    .query(
-      Q.where('protocol_id', protocolId),
-      Q.sortBy('timestamp', Q.desc)
-    )
-    .fetch();
+  const doses = localStorageDB.doses.query(d => d.protocolId === protocolId);
+  return doses.sort((a, b) => b.timestamp - a.timestamp);
 }
 
 /**
  * Get the most recent dose for a protocol
  */
 export async function getLatestDose(protocolId: string): Promise<Dose | null> {
-  const doses = await database
-    .get<Dose>('doses')
-    .query(
-      Q.where('protocol_id', protocolId),
-      Q.sortBy('timestamp', Q.desc),
-      Q.take(1)
-    )
-    .fetch();
-
+  const doses = await getDosesForProtocol(protocolId);
   return doses.length > 0 ? doses[0] : null;
 }
