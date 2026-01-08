@@ -1,11 +1,28 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '../src/store/appStore';
 import { createBottleAndProtocol } from '../src/services/bottleService';
 import { generateRecoveryKey } from '../src/utils/crypto';
 import * as SecureStore from 'expo-secure-store';
 import { STORAGE_KEYS } from '../src/config';
+
+// Web fallback for SecureStore (which only works on native)
+const storage = {
+  setItem: async (key: string, value: string) => {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+    } else {
+      await SecureStore.setItemAsync(key, value);
+    }
+  },
+  getItem: async (key: string) => {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    }
+    return SecureStore.getItemAsync(key);
+  },
+};
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -26,18 +43,24 @@ export default function OnboardingScreen() {
   }
 
   const handleStartProtocol = async () => {
+    console.log('[Onboarding] Starting protocol creation...');
     if (isCreating) return;
     setIsCreating(true);
 
     try {
+      console.log('[Onboarding] Generating recovery key...');
       const key = await generateRecoveryKey();
+      console.log('[Onboarding] Recovery key generated');
       setRecoveryKey(key);
-      await SecureStore.setItemAsync(STORAGE_KEYS.RECOVERY_KEY, key);
+      await storage.setItem(STORAGE_KEYS.RECOVERY_KEY, key);
+      console.log('[Onboarding] Recovery key saved');
 
+      console.log('[Onboarding] Creating bottle and protocol...');
       const { protocol } = await createBottleAndProtocol(
         pendingBottle.token,
         pendingBottle.productInfo
       );
+      console.log('[Onboarding] Protocol created:', protocol.id);
 
       setActiveProtocol({
         id: protocol.id,
@@ -51,6 +74,7 @@ export default function OnboardingScreen() {
 
       setStep('recovery');
     } catch (error) {
+      console.error('[Onboarding] Error:', error);
       Alert.alert('Error', 'Failed to start protocol. Please try again.');
     } finally {
       setIsCreating(false);
@@ -58,7 +82,7 @@ export default function OnboardingScreen() {
   };
 
   const handleComplete = async () => {
-    await SecureStore.setItemAsync(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
+    await storage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETE, 'true');
     setOnboardingComplete(true);
     setPendingBottle(null);
     router.replace('/');
