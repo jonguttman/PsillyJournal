@@ -1,156 +1,145 @@
-import { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAppStore, selectNeedsOnboarding, selectHasActiveProtocol } from '../src/store/appStore';
-import { getActiveProtocol } from '../src/services/bottleService';
+import { StatusBar } from 'expo-status-bar';
+import {
+  ProtocolCard,
+  DoseButton,
+  DoseSuccessToast,
+  ConfirmDoseModal,
+  EmptyProtocolCard,
+} from '../src/components';
+import { useActiveProtocol, useDoseTracking } from '../src/hooks';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { 
-    isLoading, 
-    activeProtocol, 
-    pendingBottle,
-    setActiveProtocol,
-    setLoading 
-  } = useAppStore();
-  
-  const needsOnboarding = useAppStore(selectNeedsOnboarding);
-  const hasActiveProtocol = useAppStore(selectHasActiveProtocol);
+  const { protocol, isLoading } = useActiveProtocol();
+  const { doseCountToday, isLogging, lastDose, handleLogDose, handleUndo } = useDoseTracking(protocol);
 
-  // Load active protocol on mount
-  useEffect(() => {
-    loadActiveProtocol().catch((error) => {
-      console.error('[HomeScreen] Failed to load:', error);
-      setLoading(false);
-    });
-  }, []);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [lastDoseTime, setLastDoseTime] = useState<Date | null>(null);
 
-  // Handle pending bottle from deep link
-  useEffect(() => {
-    if (pendingBottle) {
-      router.push('/onboarding');
+  const onDosePress = () => {
+    if (doseCountToday > 0) {
+      setShowConfirmModal(true);
+    } else {
+      confirmDose();
     }
-  }, [pendingBottle]);
+  };
 
-  const loadActiveProtocol = async () => {
+  const confirmDose = async () => {
+    setShowConfirmModal(false);
     try {
-      const protocol = await getActiveProtocol();
-      if (protocol) {
-        setActiveProtocol({
-          id: protocol.id,
-          sessionId: protocol.sessionId,
-          productId: protocol.productId,
-          productName: protocol.productName,
-          currentDay: protocol.currentDay,
-          totalDays: protocol.totalDays,
-          status: protocol.status,
-        });
-      }
+      await handleLogDose();
+      setLastDoseTime(new Date());
+      setShowSuccessToast(true);
     } catch (error) {
-      console.error('Failed to load protocol:', error);
-    } finally {
-      setLoading(false);
+      // TODO: Show error toast
+      console.error(error);
     }
+  };
+
+  const onUndo = async () => {
+    setShowSuccessToast(false);
+    await handleUndo();
   };
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
-
-  // No active protocol - show onboarding prompt
-  if (needsOnboarding) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Psilly Journal</Text>
-          <Text style={styles.subtitle}>Your private microdosing companion</Text>
-          
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Get Started</Text>
-            <Text style={styles.cardText}>
-              Scan the QR code on your Psilly bottle to begin your journaling journey.
-            </Text>
-            
-            <TouchableOpacity 
-              style={styles.primaryButton}
-              onPress={() => router.push('/scan')}
-            >
-              <Text style={styles.primaryButtonText}>Scan Bottle</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <TouchableOpacity 
-            style={styles.linkButton}
-            onPress={() => router.push('/settings')}
-          >
-            <Text style={styles.linkText}>Restore from recovery key</Text>
-          </TouchableOpacity>
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.loading}>
+          <Text style={styles.loadingText}>Loading...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
-  // Has active protocol - show journal home
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Psilly Journal</Text>
-        <TouchableOpacity onPress={() => router.push('/settings')}>
-          <Text style={styles.settingsIcon}>⚙️</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="light" />
 
-      <View style={styles.content}>
-        {/* Protocol Summary Card */}
-        <View style={styles.card}>
-          <Text style={styles.productName}>{activeProtocol?.productName}</Text>
-          <Text style={styles.dayCounter}>
-            Day {activeProtocol?.currentDay} of {activeProtocol?.totalDays}
-          </Text>
-          
-          {/* Progress Bar */}
-          <View style={styles.progressBar}>
-            <View 
-              style={[
-                styles.progressFill, 
-                { width: `${((activeProtocol?.currentDay || 0) / (activeProtocol?.totalDays || 30)) * 100}%` }
-              ]} 
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Psilly Journal</Text>
+          <TouchableOpacity onPress={() => router.push('/settings')}>
+            <Text style={styles.settingsIcon}>⚙️</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Protocol Card or Empty State */}
+        {protocol ? (
+          <>
+            <ProtocolCard
+              productName={protocol.productName}
+              currentDay={protocol.currentDay}
+              totalDays={protocol.totalDays}
             />
-          </View>
-        </View>
 
-        {/* Quick Actions */}
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => router.push('/scan')}
-          >
-            <Text style={styles.actionIcon}>📷</Text>
-            <Text style={styles.actionText}>Log Dose</Text>
-          </TouchableOpacity>
+            {/* Dose Button */}
+            <DoseButton
+              onPress={onDosePress}
+              isLoading={isLogging}
+              hasLoggedToday={doseCountToday > 0}
+            />
 
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => router.push('/entry')}
-          >
-            <Text style={styles.actionIcon}>✏️</Text>
-            <Text style={styles.actionText}>New Entry</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Quick Actions */}
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => router.push('/scan')}
+              >
+                <Text style={styles.actionIcon}>📷</Text>
+                <Text style={styles.actionText}>Scan Bottle</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => router.push('/entry')}
+              >
+                <Text style={styles.actionIcon}>✏️</Text>
+                <Text style={styles.actionText}>New Entry</Text>
+              </TouchableOpacity>
+            </View>
 
-        {/* View Journal */}
-        <TouchableOpacity 
-          style={styles.secondaryButton}
-          onPress={() => router.push('/journal')}
-        >
-          <Text style={styles.secondaryButtonText}>View Journal</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+            {/* Recent Entries Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent Entries</Text>
+                <TouchableOpacity onPress={() => router.push('/journal')}>
+                  <Text style={styles.viewAll}>View All →</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.emptyEntries}>
+                <Text style={styles.emptyText}>No entries yet</Text>
+                <Text style={styles.emptySubtext}>
+                  Tap "New Entry" to record your first reflection
+                </Text>
+              </View>
+            </View>
+          </>
+        ) : (
+          <EmptyProtocolCard onScanPress={() => router.push('/scan')} />
+        )}
+      </ScrollView>
+
+      {/* Confirm Modal */}
+      <ConfirmDoseModal
+        visible={showConfirmModal}
+        doseCount={doseCountToday}
+        onConfirm={confirmDose}
+        onCancel={() => setShowConfirmModal(false)}
+      />
+
+      {/* Success Toast */}
+      <DoseSuccessToast
+        visible={showSuccessToast}
+        timestamp={lastDoseTime || new Date()}
+        onUndo={onUndo}
+        onDismiss={() => setShowSuccessToast(false)}
+      />
+    </SafeAreaView>
   );
 }
 
@@ -159,15 +148,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0a0a0a',
   },
+  scroll: {
+    flex: 1,
+  },
+  content: {
+    padding: 20,
+    paddingTop: 10,
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#a1a1aa',
+    fontSize: 16,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    marginBottom: 24,
   },
-  headerTitle: {
+  title: {
     color: '#ffffff',
     fontSize: 24,
     fontWeight: '700',
@@ -175,68 +178,7 @@ const styles = StyleSheet.create({
   settingsIcon: {
     fontSize: 24,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 40,
-  },
-  title: {
-    color: '#ffffff',
-    fontSize: 32,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    color: '#a1a1aa',
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 48,
-  },
-  card: {
-    backgroundColor: '#18181b',
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 24,
-  },
-  cardTitle: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  cardText: {
-    color: '#a1a1aa',
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  productName: {
-    color: '#8b5cf6',
-    fontSize: 14,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  dayCounter: {
-    color: '#ffffff',
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#27272a',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#8b5cf6',
-    borderRadius: 4,
-  },
-  actionsContainer: {
+  actions: {
     flexDirection: 'row',
     gap: 12,
     marginBottom: 24,
@@ -245,53 +187,50 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#18181b',
     borderRadius: 12,
-    padding: 20,
+    padding: 16,
     alignItems: 'center',
+    gap: 8,
   },
   actionIcon: {
-    fontSize: 28,
-    marginBottom: 8,
+    fontSize: 24,
   },
   actionText: {
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '500',
   },
-  primaryButton: {
-    backgroundColor: '#8b5cf6',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
+  section: {
+    marginTop: 8,
   },
-  primaryButtonText: {
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
   },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: '#27272a',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  linkButton: {
-    alignItems: 'center',
-    padding: 16,
-  },
-  linkText: {
+  viewAll: {
     color: '#8b5cf6',
     fontSize: 14,
   },
-  loadingText: {
+  emptyEntries: {
+    backgroundColor: '#18181b',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyText: {
     color: '#a1a1aa',
     fontSize: 16,
+    marginBottom: 4,
+  },
+  emptySubtext: {
+    color: '#71717a',
+    fontSize: 14,
     textAlign: 'center',
-    marginTop: 100,
   },
 });
