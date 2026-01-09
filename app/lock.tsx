@@ -53,7 +53,14 @@ export default function LockScreen() {
       // Confirm PIN matches
       if (pin === setupPin) {
         await setPin(pin);
-        await unlockJournal();
+        // Switch to unlock mode so user must enter their new PIN
+        setHasPin(true);
+        setMode('unlock');
+        setSetupPin('');
+        setErrorMessage('PIN set! Now enter it to unlock your journal.');
+        setTimeout(() => {
+          setErrorMessage('');
+        }, 2000);
       } else {
         setError(true);
         setErrorMessage('PINs do not match');
@@ -137,6 +144,7 @@ export default function LockScreen() {
         {/* PIN Input */}
         <View style={styles.pinContainer}>
           <PinInput
+            key={mode}
             length={4}
             onComplete={handlePinComplete}
             error={error}

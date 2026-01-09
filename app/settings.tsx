@@ -67,6 +67,29 @@ export default function SettingsScreen() {
     router.replace('/lock');
   };
 
+  const handleRemovePin = () => {
+    Alert.alert(
+      'Remove PIN',
+      'Are you sure you want to remove your PIN? Your journal will no longer be protected.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove PIN',
+          style: 'destructive',
+          onPress: async () => {
+            if (Platform.OS === 'web') {
+              localStorage.removeItem(STORAGE_KEYS.PIN_HASH);
+            } else {
+              await SecureStore.deleteItemAsync(STORAGE_KEYS.PIN_HASH);
+            }
+            setHasPinSet(false);
+            Alert.alert('Success', 'PIN has been removed');
+          },
+        },
+      ]
+    );
+  };
+
   const handleDeleteAllData = () => {
     Alert.alert(
       'Delete All Data',
@@ -187,6 +210,12 @@ export default function SettingsScreen() {
             <Text style={styles.menuItemText}>Lock Journal Now</Text>
             <Text style={styles.menuItemArrow}>→</Text>
           </TouchableOpacity>
+          {hasPinSet && (
+            <TouchableOpacity style={[styles.menuItem, styles.menuItemSpaced]} onPress={handleRemovePin}>
+              <Text style={styles.menuItemText}>Remove PIN</Text>
+              <Text style={styles.menuItemArrow}>→</Text>
+            </TouchableOpacity>
+          )}
           <Text style={styles.lockInfo}>
             {hasPinSet
               ? 'Your journal is secured with a PIN. Lock it to prevent unauthorized access.'
@@ -231,6 +260,7 @@ const styles = StyleSheet.create({
   settingLabel: { color: '#ffffff', fontSize: 16, marginBottom: 4 },
   settingDescription: { color: '#a1a1aa', fontSize: 13 },
   menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#18181b', borderRadius: 12, padding: 16 },
+  menuItemSpaced: { marginTop: 8 },
   menuItemText: { color: '#ffffff', fontSize: 16 },
   menuItemArrow: { color: '#a1a1aa', fontSize: 18 },
   keyCard: { backgroundColor: '#18181b', borderRadius: 12, padding: 20, marginTop: 12 },
