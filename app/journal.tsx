@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useActiveProtocol } from '../src/hooks';
+import { useActiveProtocol, useLockProtection } from '../src/hooks';
 import { getEntriesForProtocol } from '../src/services/entryService';
 import { EntryCard } from '../src/components';
 import type { Entry } from '../src/db/localStorageDB';
@@ -16,6 +16,7 @@ import { getEntryMetrics } from '../src/db/localStorageDB';
 
 export default function JournalScreen() {
   const router = useRouter();
+  useLockProtection(); // Protect this route from locked access
   const { protocol } = useActiveProtocol();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [isLoading, setIsLoading] = useState(true);

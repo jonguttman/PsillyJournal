@@ -5,3 +5,4 @@ export { ConfirmDoseModal } from './ConfirmDoseModal';
 export { EmptyProtocolCard } from './EmptyProtocolCard';
 export { EntryCard } from './EntryCard';
 export { MetricSlider } from './MetricSlider';
+export { PinInput } from './PinInput';

@@ -47,6 +47,10 @@ interface AppState {
   hasOptedIn: boolean;
   hasCompletedOnboarding: boolean;
 
+  // Lock state
+  isLocked: boolean;
+  lockTimestamp: number | null;
+
   // Actions
   setInitialized: (value: boolean) => void;
   setLoading: (value: boolean) => void;
@@ -63,7 +67,9 @@ interface AppState {
   
   setOptedIn: (value: boolean) => void;
   setOnboardingComplete: (value: boolean) => void;
-  
+
+  setLocked: (locked: boolean) => void;
+
   reset: () => void;
 }
 
@@ -78,6 +84,8 @@ const initialState = {
   pendingSyncCount: 0,
   hasOptedIn: false,
   hasCompletedOnboarding: false,
+  isLocked: false,
+  lockTimestamp: null,
 };
 
 export const useAppStore = create<AppState>((set) => ({
@@ -104,6 +112,11 @@ export const useAppStore = create<AppState>((set) => ({
   setOptedIn: (value) => set({ hasOptedIn: value }),
   setOnboardingComplete: (value) => set({ hasCompletedOnboarding: value }),
 
+  setLocked: (locked) => set({
+    isLocked: locked,
+    lockTimestamp: locked ? Date.now() : null
+  }),
+
   reset: () => set(initialState),
 }));
 
@@ -121,3 +134,6 @@ export const selectNeedsOnboarding = (state: AppState) =>
 
 export const selectCanSync = (state: AppState) =>
   state.hasOptedIn && state.syncStatus !== 'offline';
+
+export const selectIsLocked = (state: AppState) =>
+  state.isLocked;

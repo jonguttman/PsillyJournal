@@ -68,6 +68,7 @@ export const STORAGE_KEYS = {
   RECOVERY_KEY: 'psilly_recovery_key',
   HAS_OPTED_IN: 'psilly_opted_in',
   ONBOARDING_COMPLETE: 'psilly_onboarded',
+  PIN_HASH: 'psilly_pin_hash',
 };
 
 // Feature Flags
