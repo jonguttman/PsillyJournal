@@ -70,7 +70,7 @@ const errorStyles = StyleSheet.create({
 });
 
 function RootLayoutContent() {
-  const { setPendingBottle, setLoading, setInitialized } = useAppStore();
+  const { setPendingBottle, setLoading, setInitialized, isLocked } = useAppStore();
 
   useEffect(() => {
     const handleInitialURL = async () => {
@@ -121,6 +121,7 @@ function RootLayoutContent() {
           animation: 'slide_from_right',
         }}
       >
+        <Stack.Screen name="lock" options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="index" />
         <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="onboarding" />

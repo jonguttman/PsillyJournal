@@ -10,13 +10,14 @@ import {
   EmptyProtocolCard,
   EntryCard,
 } from '../src/components';
-import { useActiveProtocol, useDoseTracking } from '../src/hooks';
+import { useActiveProtocol, useDoseTracking, useLockProtection } from '../src/hooks';
 import { getRecentEntries } from '../src/services/entryService';
 import type { Entry } from '../src/db/localStorageDB';
 import { getEntryMetrics } from '../src/db/localStorageDB';
 
 export default function HomeScreen() {
   const router = useRouter();
+  useLockProtection(); // Protect this route from locked access
   const { protocol, isLoading } = useActiveProtocol();
   const { doseCountToday, isLogging, lastDose, handleLogDose, handleUndo } = useDoseTracking(protocol);
 

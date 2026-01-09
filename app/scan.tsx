@@ -1,21 +1,50 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { QRScanner } from '../src/components/QRScanner';
 import { handleScannedToken, switchProduct, logDose } from '../src/services/bottleService';
 import { useAppStore } from '../src/store/appStore';
 import type { QRToken } from '../src/types';
+import { localStorageDB } from '../src/db/localStorageDB';
 
 export default function ScanScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const isUnlockMode = params.unlock === 'true';
   const [isProcessing, setIsProcessing] = useState(false);
-  const { setPendingBottle, setActiveProtocol, activeProtocol } = useAppStore();
+  const { setPendingBottle, setActiveProtocol, activeProtocol, setLocked } = useAppStore();
 
   const handleScan = async (token: QRToken) => {
     if (isProcessing) return;
     setIsProcessing(true);
 
     try {
+      // Unlock mode - check if token matches any stored bottle
+      if (isUnlockMode) {
+        const bottles = localStorageDB.bottles.getAll();
+        const matchingBottle = bottles.find(b => b.bottleToken === token);
+
+        if (matchingBottle) {
+          // Success! Unlock journal
+          setLocked(false);
+          Alert.alert(
+            'Unlocked! 🍄',
+            'Welcome back to your journal.',
+            [{ text: 'Continue', onPress: () => router.replace('/') }]
+          );
+        } else {
+          // No match - deny unlock
+          Alert.alert(
+            'Bottle Not Recognized',
+            'This QR code doesn\'t match any of your registered bottles. Please use your PIN or scan a bottle you\'ve previously used.',
+            [{ text: 'Try Again', onPress: () => router.back() }]
+          );
+          setIsProcessing(false);
+        }
+        return;
+      }
+
+      // Normal scan mode
       const result = await handleScannedToken(token);
 
       switch (result.type) {

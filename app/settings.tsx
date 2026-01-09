@@ -1,10 +1,12 @@
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '../src/store/appStore';
 import * as SecureStore from 'expo-secure-store';
 import { STORAGE_KEYS } from '../src/config';
 import { useState, useEffect } from 'react';
 import { localStorageDB } from '../src/db/localStorageDB';
+import { isPinSet } from '../src/utils/lock';
+import { useLockProtection } from '../src/hooks';
 
 // Web fallback for SecureStore
 const storage = {
@@ -25,18 +27,26 @@ const storage = {
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { hasOptedIn, setOptedIn, activeProtocol } = useAppStore();
+  useLockProtection(); // Protect this route from locked access
+  const { hasOptedIn, setOptedIn, activeProtocol, setLocked } = useAppStore();
   const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
+  const [hasPinSet, setHasPinSet] = useState(false);
 
   useEffect(() => {
     loadRecoveryKey();
+    checkPinStatus();
   }, []);
 
   const loadRecoveryKey = async () => {
     const key = await storage.getItem(STORAGE_KEYS.RECOVERY_KEY);
     console.log('[Settings] Recovery key loaded:', key ? 'exists' : 'null');
     setRecoveryKey(key);
+  };
+
+  const checkPinStatus = async () => {
+    const pinExists = await isPinSet();
+    setHasPinSet(pinExists);
   };
 
   const toggleOptIn = async (value: boolean) => {
@@ -52,14 +62,19 @@ export default function SettingsScreen() {
     setShowKey(!showKey);
   };
 
-  const handleLogout = () => {
+  const handleLockJournal = () => {
+    setLocked(true);
+    router.replace('/lock');
+  };
+
+  const handleDeleteAllData = () => {
     Alert.alert(
-      'Log Out',
-      'This will delete all your local data including protocols, entries, and bottles. This cannot be undone.\n\nMake sure you have saved your recovery key if you want to restore your data later.',
+      'Delete All Data',
+      'This will permanently delete all your local data including protocols, entries, and bottles. This cannot be undone.\n\nMake sure you have saved your recovery key if you want to restore your data later.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Log Out',
+          text: 'Delete All Data',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -73,12 +88,14 @@ export default function SettingsScreen() {
                 localStorage.removeItem(STORAGE_KEYS.HAS_OPTED_IN);
                 localStorage.removeItem(STORAGE_KEYS.DEVICE_ID);
                 localStorage.removeItem(STORAGE_KEYS.SALT);
+                localStorage.removeItem(STORAGE_KEYS.PIN_HASH);
               } else {
                 await SecureStore.deleteItemAsync(STORAGE_KEYS.RECOVERY_KEY);
                 await SecureStore.deleteItemAsync(STORAGE_KEYS.ONBOARDING_COMPLETE);
                 await SecureStore.deleteItemAsync(STORAGE_KEYS.HAS_OPTED_IN);
                 await SecureStore.deleteItemAsync(STORAGE_KEYS.DEVICE_ID);
                 await SecureStore.deleteItemAsync(STORAGE_KEYS.SALT);
+                await SecureStore.deleteItemAsync(STORAGE_KEYS.PIN_HASH);
               }
 
               // Clear app store state
@@ -87,15 +104,16 @@ export default function SettingsScreen() {
                 activeProtocol: null,
                 hasCompletedOnboarding: false,
                 hasOptedIn: false,
+                isLocked: false,
               });
 
-              console.log('[Settings] Logged out successfully');
+              console.log('[Settings] All data deleted successfully');
 
               // Navigate to scan screen to start fresh
               router.replace('/scan');
             } catch (error) {
-              console.error('[Settings] Error during logout:', error);
-              Alert.alert('Error', 'Failed to log out. Please try again.');
+              console.error('[Settings] Error deleting data:', error);
+              Alert.alert('Error', 'Failed to delete data. Please try again.');
             }
           },
         },
@@ -104,7 +122,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backText}>← Back</Text>
@@ -164,9 +182,22 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Security</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={handleLockJournal}>
+            <Text style={styles.menuItemText}>Lock Journal Now</Text>
+            <Text style={styles.menuItemArrow}>→</Text>
+          </TouchableOpacity>
+          <Text style={styles.lockInfo}>
+            {hasPinSet
+              ? 'Your journal is secured with a PIN. Lock it to prevent unauthorized access.'
+              : 'Set up a PIN when you lock your journal for the first time.'}
+          </Text>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Danger Zone</Text>
-          <TouchableOpacity style={styles.dangerMenuItem} onPress={handleLogout}>
-            <Text style={styles.dangerMenuItemText}>Log Out</Text>
+          <TouchableOpacity style={styles.dangerMenuItem} onPress={handleDeleteAllData}>
+            <Text style={styles.dangerMenuItemText}>Delete All Data</Text>
             <Text style={styles.menuItemArrow}>→</Text>
           </TouchableOpacity>
           <Text style={styles.dangerWarning}>
@@ -179,7 +210,7 @@ export default function SettingsScreen() {
           <Text style={styles.footerText}>Your data never leaves your device</Text>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -206,6 +237,7 @@ const styles = StyleSheet.create({
   keyLabel: { color: '#a1a1aa', fontSize: 12, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
   keyText: { color: '#8b5cf6', fontSize: 18, fontWeight: '600', fontFamily: 'monospace', letterSpacing: 2, marginBottom: 12 },
   keyWarning: { color: '#71717a', fontSize: 13, lineHeight: 18 },
+  lockInfo: { color: '#71717a', fontSize: 12, marginTop: 8, lineHeight: 16 },
   dangerMenuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#18181b', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#ef444420' },
   dangerMenuItemText: { color: '#ef4444', fontSize: 16, fontWeight: '500' },
   dangerWarning: { color: '#71717a', fontSize: 12, marginTop: 8, lineHeight: 16 },
