@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ProductInfo, QRToken, SyncStatus } from '../types';
+import type { NotificationTiming } from '../services/notificationService';
 
 /**
  * Active protocol state
@@ -46,6 +47,7 @@ interface AppState {
   // User preferences
   hasOptedIn: boolean;
   hasCompletedOnboarding: boolean;
+  notificationTiming: NotificationTiming;
 
   // Lock state
   isLocked: boolean;
@@ -67,6 +69,7 @@ interface AppState {
   
   setOptedIn: (value: boolean) => void;
   setOnboardingComplete: (value: boolean) => void;
+  setNotificationTiming: (timing: NotificationTiming) => void;
 
   setLocked: (locked: boolean) => void;
 
@@ -84,6 +87,7 @@ const initialState = {
   pendingSyncCount: 0,
   hasOptedIn: false,
   hasCompletedOnboarding: false,
+  notificationTiming: '4h' as NotificationTiming,
   isLocked: false,
   lockTimestamp: null,
 };
@@ -111,6 +115,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   setOptedIn: (value) => set({ hasOptedIn: value }),
   setOnboardingComplete: (value) => set({ hasCompletedOnboarding: value }),
+  setNotificationTiming: (timing) => set({ notificationTiming: timing }),
 
   setLocked: (locked) => set({
     isLocked: locked,

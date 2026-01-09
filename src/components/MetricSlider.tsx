@@ -8,6 +8,8 @@ interface MetricSliderProps {
   onChange: (value: number) => void;
   lowLabel?: string;
   highLabel?: string;
+  min?: number;  // default 1
+  max?: number;  // default 5
 }
 
 export function MetricSlider({
@@ -16,6 +18,8 @@ export function MetricSlider({
   onChange,
   lowLabel = 'Low',
   highLabel = 'High',
+  min = 1,
+  max = 5,
 }: MetricSliderProps) {
   return (
     <View style={styles.container}>
@@ -25,8 +29,8 @@ export function MetricSlider({
       </View>
       <Slider
         style={styles.slider}
-        minimumValue={1}
-        maximumValue={5}
+        minimumValue={min}
+        maximumValue={max}
         step={1}
         value={value}
         onValueChange={onChange}

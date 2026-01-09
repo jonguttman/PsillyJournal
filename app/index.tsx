@@ -46,19 +46,32 @@ export default function HomeScreen() {
     if (doseCountToday > 0) {
       setShowConfirmModal(true);
     } else {
-      confirmDose();
+      confirmDose(true); // First dose of the day
     }
   };
 
-  const confirmDose = async () => {
+  const confirmDose = async (isFirstDoseToday = false) => {
     setShowConfirmModal(false);
     try {
-      await handleLogDose();
-      setLastDoseTime(new Date());
-      setShowSuccessToast(true);
+      const dose = await handleLogDose();
+      
+      if (isFirstDoseToday && dose && protocol) {
+        // First dose of the day - navigate to pre-dose check-in
+        router.push({
+          pathname: '/check-in/pre-dose',
+          params: {
+            dose_id: dose.id,
+            protocol_id: protocol.id,
+            day_number: String(protocol.currentDay),
+          },
+        });
+      } else {
+        // Subsequent doses - just show success toast
+        setLastDoseTime(new Date());
+        setShowSuccessToast(true);
+      }
     } catch (error) {
-      // TODO: Show error toast
-      console.error(error);
+      console.error('[Home] Error logging dose:', error);
     }
   };
 

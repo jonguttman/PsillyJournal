@@ -6,7 +6,7 @@ interface UseDoseTrackingResult {
   doseCountToday: number;
   isLogging: boolean;
   lastDose: Dose | null;
-  handleLogDose: () => Promise<void>;
+  handleLogDose: () => Promise<Dose | undefined>;
   handleUndo: () => Promise<void>;
 }
 
@@ -22,14 +22,15 @@ export function useDoseTracking(protocol: Protocol | null): UseDoseTrackingResul
     }
   }, [protocol?.id]);
 
-  const handleLogDose = useCallback(async () => {
-    if (!protocol) return;
+  const handleLogDose = useCallback(async (): Promise<Dose | undefined> => {
+    if (!protocol) return undefined;
 
     setIsLogging(true);
     try {
       const dose = await logDose(protocol);
       setLastDose(dose);
       setDoseCountToday((prev) => prev + 1);
+      return dose;
     } catch (error) {
       console.error('Failed to log dose:', error);
       throw error;

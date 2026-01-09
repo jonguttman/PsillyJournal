@@ -7,6 +7,14 @@ import { useState, useEffect } from 'react';
 import { localStorageDB } from '../src/db/localStorageDB';
 import { isPinSet } from '../src/utils/lock';
 import { useLockProtection } from '../src/hooks';
+import type { NotificationTiming } from '../src/services/notificationService';
+
+const TIMING_OPTIONS: { value: NotificationTiming; label: string }[] = [
+  { value: '2h', label: '2h' },
+  { value: '4h', label: '4h' },
+  { value: '6h', label: '6h' },
+  { value: '8h', label: '8h' },
+];
 
 // Web fallback for SecureStore
 const storage = {
@@ -28,7 +36,7 @@ const storage = {
 export default function SettingsScreen() {
   const router = useRouter();
   useLockProtection(); // Protect this route from locked access
-  const { hasOptedIn, setOptedIn, activeProtocol, setLocked } = useAppStore();
+  const { hasOptedIn, setOptedIn, activeProtocol, setLocked, notificationTiming, setNotificationTiming } = useAppStore();
   const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [hasPinSet, setHasPinSet] = useState(false);
@@ -205,6 +213,37 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Notifications</Text>
+          <View style={styles.card}>
+            <Text style={styles.settingLabel}>Check-in reminder after dose</Text>
+            <Text style={styles.settingDescription}>
+              We'll remind you to log how you're feeling
+            </Text>
+            <View style={styles.timingOptions}>
+              {TIMING_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.timingChip,
+                    notificationTiming === option.value && styles.timingChipActive,
+                  ]}
+                  onPress={() => setNotificationTiming(option.value)}
+                >
+                  <Text
+                    style={[
+                      styles.timingChipText,
+                      notificationTiming === option.value && styles.timingChipTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Security</Text>
           <TouchableOpacity style={styles.menuItem} onPress={handleLockJournal}>
             <Text style={styles.menuItemText}>Lock Journal Now</Text>
@@ -268,6 +307,11 @@ const styles = StyleSheet.create({
   keyText: { color: '#8b5cf6', fontSize: 18, fontWeight: '600', fontFamily: 'monospace', letterSpacing: 2, marginBottom: 12 },
   keyWarning: { color: '#71717a', fontSize: 13, lineHeight: 18 },
   lockInfo: { color: '#71717a', fontSize: 12, marginTop: 8, lineHeight: 16 },
+  timingOptions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  timingChip: { backgroundColor: '#27272a', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: '#3f3f46' },
+  timingChipActive: { backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' },
+  timingChipText: { color: '#a1a1aa', fontSize: 14, fontWeight: '500' },
+  timingChipTextActive: { color: '#ffffff' },
   dangerMenuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#18181b', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#ef444420' },
   dangerMenuItemText: { color: '#ef4444', fontSize: 16, fontWeight: '500' },
   dangerWarning: { color: '#71717a', fontSize: 12, marginTop: 8, lineHeight: 16 },
