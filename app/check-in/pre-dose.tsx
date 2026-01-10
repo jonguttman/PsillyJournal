@@ -41,6 +41,48 @@ export default function PreDoseCheckInScreen() {
     return dose?.timestamp || Date.now();
   };
 
+  // Helper to show cross-platform alert
+  const showJournalPrompt = async (entry: { id: string }, doseTimestamp: number) => {
+    const handleYes = () => {
+      router.replace({
+        pathname: '/entry/new',
+        params: {
+          entry_id: entry.id,
+          dose_id: doseId,
+        },
+      });
+    };
+
+    const handleNo = async () => {
+      await schedulePostDoseReminder(
+        doseId,
+        entry.id,
+        doseTimestamp,
+        notificationTiming
+      );
+      router.replace('/');
+    };
+
+    // Use window.confirm on web, Alert.alert on native
+    if (Platform.OS === 'web') {
+      const wantsJournal = window.confirm('Add a journal note?\n\nYou can write more about how you\'re feeling.');
+      if (wantsJournal) {
+        handleYes();
+      } else {
+        await handleNo();
+      }
+    } else {
+      Alert.alert(
+        'Add a journal note?',
+        'You can write more about how you\'re feeling.',
+        [
+          { text: 'No', style: 'cancel', onPress: handleNo },
+          { text: 'Yes', onPress: handleYes },
+        ]
+      );
+    }
+  };
+
   const handleContinue = async () => {
     if (isSaving) return;
     setIsSaving(true);
@@ -57,64 +99,43 @@ export default function PreDoseCheckInScreen() {
         doseTimestamp,
       });
 
-      // Ask about journal note
-      Alert.alert(
-        'Add a journal note?',
-        'You can write more about how you\'re feeling.',
-        [
-          {
-            text: 'No',
-            style: 'cancel',
-            onPress: async () => {
-              // Schedule notification and go home
-              await schedulePostDoseReminder(
-                doseId,
-                entry.id,
-                doseTimestamp,
-                notificationTiming
-              );
-              router.replace('/');
-            },
-          },
-          {
-            text: 'Yes',
-            onPress: () => {
-              // Navigate to journal entry with dose linkage
-              router.replace({
-                pathname: '/entry/new',
-                params: {
-                  entry_id: entry.id,
-                  dose_id: doseId,
-                },
-              });
-            },
-          },
-        ]
-      );
+      // Ask about journal note (cross-platform)
+      await showJournalPrompt(entry, doseTimestamp);
     } catch (error) {
       console.error('[PreDoseCheckIn] Error:', error);
-      Alert.alert('Error', 'Failed to save check-in. Please try again.');
+      if (Platform.OS === 'web') {
+        window.alert('Failed to save check-in. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to save check-in. Please try again.');
+      }
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleSkip = () => {
-    Alert.alert(
-      'Skip check-in?',
-      'You can still add a journal note.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Skip',
-          onPress: () => {
-            // Continue with null preDoseState
-            setPreDoseState('');
-            handleContinueWithSkip();
+    if (Platform.OS === 'web') {
+      const shouldSkip = window.confirm('Skip check-in?\n\nYou can still add a journal note.');
+      if (shouldSkip) {
+        setPreDoseState('');
+        handleContinueWithSkip();
+      }
+    } else {
+      Alert.alert(
+        'Skip check-in?',
+        'You can still add a journal note.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Skip',
+            onPress: () => {
+              setPreDoseState('');
+              handleContinueWithSkip();
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleContinueWithSkip = async () => {
@@ -132,41 +153,15 @@ export default function PreDoseCheckInScreen() {
         doseTimestamp,
       });
 
-      // Ask about journal note
-      Alert.alert(
-        'Add a journal note?',
-        'You can write more about how you\'re feeling.',
-        [
-          {
-            text: 'No',
-            style: 'cancel',
-            onPress: async () => {
-              await schedulePostDoseReminder(
-                doseId,
-                entry.id,
-                doseTimestamp,
-                notificationTiming
-              );
-              router.replace('/');
-            },
-          },
-          {
-            text: 'Yes',
-            onPress: () => {
-              router.replace({
-                pathname: '/entry/new',
-                params: {
-                  entry_id: entry.id,
-                  dose_id: doseId,
-                },
-              });
-            },
-          },
-        ]
-      );
+      // Ask about journal note (reuse cross-platform helper)
+      await showJournalPrompt(entry, doseTimestamp);
     } catch (error) {
       console.error('[PreDoseCheckIn] Skip error:', error);
-      Alert.alert('Error', 'Failed to save. Please try again.');
+      if (Platform.OS === 'web') {
+        window.alert('Failed to save. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to save. Please try again.');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -177,18 +172,25 @@ export default function PreDoseCheckInScreen() {
   };
 
   const handleBack = () => {
-    Alert.alert(
-      'Cancel check-in?',
-      'Your dose has been logged. The check-in helps track your experience.',
-      [
-        { text: 'Stay', style: 'cancel' },
-        { 
-          text: 'Go Back', 
-          style: 'destructive',
-          onPress: () => router.back() 
-        },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      const shouldLeave = window.confirm('Cancel check-in?\n\nYour dose has been logged. The check-in helps track your experience.');
+      if (shouldLeave) {
+        router.back();
+      }
+    } else {
+      Alert.alert(
+        'Cancel check-in?',
+        'Your dose has been logged. The check-in helps track your experience.',
+        [
+          { text: 'Stay', style: 'cancel' },
+          { 
+            text: 'Go Back', 
+            style: 'destructive',
+            onPress: () => router.back() 
+          },
+        ]
+      );
+    }
   };
 
   return (
