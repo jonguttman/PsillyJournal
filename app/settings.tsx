@@ -8,6 +8,7 @@ import { localStorageDB } from '../src/db/localStorageDB';
 import { isPinSet } from '../src/utils/lock';
 import { useLockProtection } from '../src/hooks';
 import type { NotificationTiming } from '../src/services/notificationService';
+import { storage as appStorage } from '../src/utils/storage';
 
 const TIMING_OPTIONS: { value: NotificationTiming; label: string }[] = [
   { value: '2h', label: '2h' },
@@ -16,20 +17,27 @@ const TIMING_OPTIONS: { value: NotificationTiming; label: string }[] = [
   { value: '8h', label: '8h' },
 ];
 
-// Web fallback for SecureStore
+// Web fallback for SecureStore (use AsyncStorage on web, SecureStore on native)
 const storage = {
   setItem: async (key: string, value: string) => {
     if (Platform.OS === 'web') {
-      localStorage.setItem(key, value);
+      await appStorage.setItem(key, value);
     } else {
       await SecureStore.setItemAsync(key, value);
     }
   },
   getItem: async (key: string): Promise<string | null> => {
     if (Platform.OS === 'web') {
-      return localStorage.getItem(key);
+      return appStorage.getItem(key);
     }
     return SecureStore.getItemAsync(key);
+  },
+  removeItem: async (key: string) => {
+    if (Platform.OS === 'web') {
+      await appStorage.removeItem(key);
+    } else {
+      await SecureStore.deleteItemAsync(key);
+    }
   },
 };
 
@@ -85,11 +93,7 @@ export default function SettingsScreen() {
           text: 'Remove PIN',
           style: 'destructive',
           onPress: async () => {
-            if (Platform.OS === 'web') {
-              localStorage.removeItem(STORAGE_KEYS.PIN_HASH);
-            } else {
-              await SecureStore.deleteItemAsync(STORAGE_KEYS.PIN_HASH);
-            }
+            await storage.removeItem(STORAGE_KEYS.PIN_HASH);
             setHasPinSet(false);
             Alert.alert('Success', 'PIN has been removed');
           },
@@ -110,24 +114,15 @@ export default function SettingsScreen() {
           onPress: async () => {
             try {
               // Clear all database data
-              localStorageDB.clearAll();
+              await localStorageDB.clearAll();
 
               // Clear storage keys
-              if (Platform.OS === 'web') {
-                localStorage.removeItem(STORAGE_KEYS.RECOVERY_KEY);
-                localStorage.removeItem(STORAGE_KEYS.ONBOARDING_COMPLETE);
-                localStorage.removeItem(STORAGE_KEYS.HAS_OPTED_IN);
-                localStorage.removeItem(STORAGE_KEYS.DEVICE_ID);
-                localStorage.removeItem(STORAGE_KEYS.SALT);
-                localStorage.removeItem(STORAGE_KEYS.PIN_HASH);
-              } else {
-                await SecureStore.deleteItemAsync(STORAGE_KEYS.RECOVERY_KEY);
-                await SecureStore.deleteItemAsync(STORAGE_KEYS.ONBOARDING_COMPLETE);
-                await SecureStore.deleteItemAsync(STORAGE_KEYS.HAS_OPTED_IN);
-                await SecureStore.deleteItemAsync(STORAGE_KEYS.DEVICE_ID);
-                await SecureStore.deleteItemAsync(STORAGE_KEYS.SALT);
-                await SecureStore.deleteItemAsync(STORAGE_KEYS.PIN_HASH);
-              }
+              await storage.removeItem(STORAGE_KEYS.RECOVERY_KEY);
+              await storage.removeItem(STORAGE_KEYS.ONBOARDING_COMPLETE);
+              await storage.removeItem(STORAGE_KEYS.HAS_OPTED_IN);
+              await storage.removeItem(STORAGE_KEYS.DEVICE_ID);
+              await storage.removeItem(STORAGE_KEYS.SALT);
+              await storage.removeItem(STORAGE_KEYS.PIN_HASH);
 
               // Clear app store state
               setOptedIn(false);

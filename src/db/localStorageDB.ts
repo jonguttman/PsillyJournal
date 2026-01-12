@@ -1,7 +1,10 @@
 /**
- * Simple localStorage-based database for web
- * Replaces WatermelonDB/LokiJS which has persistence issues on web
+ * Cross-platform async storage database
+ * Uses AsyncStorage on native (iOS/Android), localStorage on web
+ * All methods are async to support AsyncStorage
  */
+
+import { storage } from '../utils/storage';
 
 export interface StorageRecord {
   id: string;
@@ -48,6 +51,11 @@ export interface Entry extends StorageRecord {
   contributionStatus: string;
   preDoseState?: string;
   postDoseMetrics?: string;
+  contextActivity?: string;  // JSON array of tag IDs
+  contextNotes?: string;      // Free text (50 char max)
+  checkInCompleted?: boolean; // Check-in completion status
+  reflectionPromptId?: string;   // ID of prompt shown
+  reflectionPromptText?: string; // Text of prompt shown
 }
 
 // Add metrics getter helper for Entry
@@ -80,30 +88,31 @@ function generateId(): string {
   return Math.random().toString(36).substr(2, 16);
 }
 
-// Generic collection operations
+// Generic collection operations (all async for cross-platform support)
 class Collection<T extends StorageRecord> {
   constructor(private key: string) {}
 
-  getAll(): T[] {
-    const data = localStorage.getItem(this.key);
+  async getAll(): Promise<T[]> {
+    const data = await storage.getItem(this.key);
     return data ? JSON.parse(data) : [];
   }
 
-  private saveAll(items: T[]): void {
-    localStorage.setItem(this.key, JSON.stringify(items));
+  private async saveAll(items: T[]): Promise<void> {
+    await storage.setItem(this.key, JSON.stringify(items));
   }
 
-  find(id: string): T | null {
-    const items = this.getAll();
+  async find(id: string): Promise<T | null> {
+    const items = await this.getAll();
     return items.find(item => item.id === id) || null;
   }
 
-  query(filter: (item: T) => boolean): T[] {
-    return this.getAll().filter(filter);
+  async query(filter: (item: T) => boolean): Promise<T[]> {
+    const items = await this.getAll();
+    return items.filter(filter);
   }
 
-  create(data: Omit<T, 'id' | '_createdAt' | '_updatedAt'>): T {
-    const items = this.getAll();
+  async create(data: Omit<T, 'id' | '_createdAt' | '_updatedAt'>): Promise<T> {
+    const items = await this.getAll();
     const now = Date.now();
     const newItem = {
       ...data,
@@ -112,13 +121,13 @@ class Collection<T extends StorageRecord> {
       _updatedAt: now,
     } as T;
     items.push(newItem);
-    this.saveAll(items);
+    await this.saveAll(items);
     console.log(`[LocalStorageDB] Created ${this.key} record:`, newItem.id);
     return newItem;
   }
 
-  update(id: string, updates: Partial<T>): T | null {
-    const items = this.getAll();
+  async update(id: string, updates: Partial<T>): Promise<T | null> {
+    const items = await this.getAll();
     const index = items.findIndex(item => item.id === id);
     if (index === -1) return null;
 
@@ -127,20 +136,20 @@ class Collection<T extends StorageRecord> {
       ...updates,
       _updatedAt: Date.now(),
     };
-    this.saveAll(items);
+    await this.saveAll(items);
     return items[index];
   }
 
-  delete(id: string): boolean {
-    const items = this.getAll();
+  async delete(id: string): Promise<boolean> {
+    const items = await this.getAll();
     const filtered = items.filter(item => item.id !== id);
     if (filtered.length === items.length) return false;
-    this.saveAll(filtered);
+    await this.saveAll(filtered);
     return true;
   }
 
-  clear(): void {
-    localStorage.removeItem(this.key);
+  async clear(): Promise<void> {
+    await storage.removeItem(this.key);
   }
 }
 
@@ -152,11 +161,11 @@ export const localStorageDB = {
   doses: new Collection<Dose>(STORAGE_KEYS.DOSES),
 
   // Clear all data
-  clearAll() {
+  async clearAll() {
     console.log('[LocalStorageDB] Clearing all data');
-    this.bottles.clear();
-    this.protocols.clear();
-    this.entries.clear();
-    this.doses.clear();
+    await this.bottles.clear();
+    await this.protocols.clear();
+    await this.entries.clear();
+    await this.doses.clear();
   },
 };

@@ -20,8 +20,10 @@ export async function createEntry(params: {
   metrics: ReflectionMetrics;
   isDoseDay: boolean;
   tags?: string[];
+  reflectionPromptId?: string;
+  reflectionPromptText?: string;
 }): Promise<Entry> {
-  const entry = localStorageDB.entries.create({
+  const entry = await localStorageDB.entries.create({
     protocolId: params.protocolId,
     dayNumber: params.dayNumber,
     content: params.content,
@@ -32,6 +34,8 @@ export async function createEntry(params: {
     tags: JSON.stringify(params.tags || []),
     timestamp: Date.now(),
     contributionStatus: 'pending',
+    reflectionPromptId: params.reflectionPromptId,
+    reflectionPromptText: params.reflectionPromptText,
   });
 
   return entry;
@@ -47,8 +51,10 @@ export async function createCheckInEntry(params: {
   dayNumber: number;
   preDoseState: string | null;  // null if skipped
   doseTimestamp: number;
+  reflectionPromptId?: string;
+  reflectionPromptText?: string;
 }): Promise<Entry> {
-  const entry = localStorageDB.entries.create({
+  const entry = await localStorageDB.entries.create({
     protocolId: params.protocolId,
     doseId: params.doseId,
     dayNumber: params.dayNumber,
@@ -62,42 +68,48 @@ export async function createCheckInEntry(params: {
     timestamp: Date.now(),
     contributionStatus: 'pending',
     preDoseState: params.preDoseState ?? undefined,
+    reflectionPromptId: params.reflectionPromptId,
+    reflectionPromptText: params.reflectionPromptText,
   });
 
   return entry;
 }
 
 /**
- * Update entry with post-dose metrics
+ * Update entry with post-dose metrics and context capture
  * Called from post-dose check-in screen
  */
 export async function updatePostDoseMetrics(
   entryId: string,
   metrics: PostDoseMetrics,
-  notes?: string
+  context?: {
+    activity?: string[];  // Tag IDs (moving, still, social, etc.)
+    notes?: string;       // Free text (50 char max)
+  }
 ): Promise<Entry | null> {
   const updateData: Partial<Entry> = {
     postDoseMetrics: JSON.stringify(metrics),
+    checkInCompleted: true, // Mark check-in as complete
   };
 
-  if (notes !== undefined && notes.trim().length > 0) {
-    // Append notes to existing content, or set as content
-    const existing = localStorageDB.entries.find(entryId);
-    if (existing) {
-      updateData.content = existing.content 
-        ? `${existing.content}\n\n[Post-dose notes]\n${notes.trim()}`
-        : notes.trim();
-    }
+  // Save context activity tags if provided
+  if (context?.activity && context.activity.length > 0) {
+    updateData.contextActivity = JSON.stringify(context.activity);
   }
 
-  return localStorageDB.entries.update(entryId, updateData);
+  // Save context notes if provided (enforce 50 char limit)
+  if (context?.notes && context.notes.trim().length > 0) {
+    updateData.contextNotes = context.notes.trim().slice(0, 50);
+  }
+
+  return await localStorageDB.entries.update(entryId, updateData);
 }
 
 /**
  * Find entry by dose ID
  */
 export async function getEntryByDoseId(doseId: string): Promise<Entry | null> {
-  const entries = localStorageDB.entries.query(e => e.doseId === doseId);
+  const entries = await localStorageDB.entries.query(e => e.doseId === doseId);
   return entries.length > 0 ? entries[0] : null;
 }
 
@@ -113,7 +125,7 @@ export function isDoseWithin24Hours(doseTimestamp: number): boolean {
  * Get all entries for a protocol, newest first
  */
 export async function getEntriesForProtocol(protocolId: string): Promise<Entry[]> {
-  const entries = localStorageDB.entries.query(e => e.protocolId === protocolId);
+  const entries = await localStorageDB.entries.query(e => e.protocolId === protocolId);
   return entries.sort((a, b) => b.timestamp - a.timestamp);
 }
 
@@ -121,7 +133,7 @@ export async function getEntriesForProtocol(protocolId: string): Promise<Entry[]
  * Get a single entry by ID
  */
 export async function getEntryById(entryId: string): Promise<Entry | null> {
-  return localStorageDB.entries.find(entryId);
+  return await localStorageDB.entries.find(entryId);
 }
 
 /**
@@ -145,14 +157,14 @@ export async function updateEntry(
   }
   if (updates.tags !== undefined) updateData.tags = JSON.stringify(updates.tags);
 
-  return localStorageDB.entries.update(entryId, updateData);
+  return await localStorageDB.entries.update(entryId, updateData);
 }
 
 /**
  * Delete an entry
  */
 export async function deleteEntry(entryId: string): Promise<void> {
-  localStorageDB.entries.delete(entryId);
+  await localStorageDB.entries.delete(entryId);
 }
 
 /**

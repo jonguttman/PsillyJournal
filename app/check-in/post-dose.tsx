@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MetricSlider } from '../../src/components/MetricSlider';
+import { ActivityTagSelector } from '../../src/components/ActivityTagSelector';
 import {
   updatePostDoseMetrics,
   getEntryByDoseId,
@@ -20,6 +21,7 @@ import {
   type PostDoseMetrics,
 } from '../../src/services/entryService';
 import { cancelReminderForDose } from '../../src/services/notificationService';
+import { calendarService } from '../../src/services/calendarService';
 import { localStorageDB } from '../../src/db/localStorageDB';
 
 export default function PostDoseCheckInScreen() {
@@ -37,7 +39,8 @@ export default function PostDoseCheckInScreen() {
     clarity: 5,
     mood: 5,
   });
-  const [notes, setNotes] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [contextNotes, setContextNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,8 +53,8 @@ export default function PostDoseCheckInScreen() {
     setIsLoading(true);
     try {
       // Check if dose exists and is within 24h
-      const dose = localStorageDB.doses.find(doseId);
-      
+      const dose = await localStorageDB.doses.find(doseId);
+
       if (!dose) {
         setIsExpired(true);
         return;
@@ -101,11 +104,17 @@ export default function PostDoseCheckInScreen() {
         return;
       }
 
-      // Update entry with post-dose metrics
-      await updatePostDoseMetrics(targetEntryId, metrics, notes.trim() || undefined);
+      // Update entry with post-dose metrics and context
+      await updatePostDoseMetrics(targetEntryId, metrics, {
+        activity: selectedTags.length > 0 ? selectedTags : undefined,
+        notes: contextNotes.trim() || undefined,
+      });
 
-      // Cancel any scheduled notification for this dose
-      await cancelReminderForDose(doseId);
+      // Cancel both calendar and notification reminders (user completed early)
+      await Promise.all([
+        calendarService.cancelReminder(doseId),
+        cancelReminderForDose(doseId),
+      ]);
 
       // Show success toast
       Alert.alert(
@@ -183,8 +192,8 @@ export default function PostDoseCheckInScreen() {
 
           {/* Title */}
           <View style={styles.titleSection}>
-            <Text style={styles.title}>How are you feeling now?</Text>
-            <Text style={styles.subtitle}>After your dose</Text>
+            <Text style={styles.icon}>✨</Text>
+            <Text style={styles.title}>How was your experience?</Text>
           </View>
 
           {/* Sliders */}
@@ -193,8 +202,8 @@ export default function PostDoseCheckInScreen() {
               label="Energy"
               value={metrics.energy}
               onChange={updateMetric('energy')}
-              lowLabel="Depleted"
-              highLabel="Vibrant"
+              lowLabel="low"
+              highLabel="high"
               min={0}
               max={10}
             />
@@ -203,8 +212,8 @@ export default function PostDoseCheckInScreen() {
               label="Clarity"
               value={metrics.clarity}
               onChange={updateMetric('clarity')}
-              lowLabel="Foggy"
-              highLabel="Crystal Clear"
+              lowLabel="foggy"
+              highLabel="clear"
               min={0}
               max={10}
             />
@@ -213,26 +222,34 @@ export default function PostDoseCheckInScreen() {
               label="Mood"
               value={metrics.mood}
               onChange={updateMetric('mood')}
-              lowLabel="Heavy"
-              highLabel="Light"
+              lowLabel="difficult"
+              highLabel="good"
               min={0}
               max={10}
             />
           </View>
 
-          {/* Notes */}
-          <View style={styles.notesSection}>
-            <Text style={styles.notesLabel}>Any notes? (optional)</Text>
-            <TextInput
-              style={styles.notesInput}
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="How did today go..."
-              placeholderTextColor="#71717a"
-              multiline
-              numberOfLines={2}
-              textAlignVertical="top"
+          {/* Context Capture (Optional) */}
+          <View style={styles.contextSection}>
+            <Text style={styles.contextLabel}>Optional: What were you doing?</Text>
+            <Text style={styles.contextHint}>Helps you discover patterns later</Text>
+
+            <ActivityTagSelector
+              selectedTags={selectedTags}
+              onTagsChange={setSelectedTags}
             />
+
+            <TextInput
+              style={styles.contextInput}
+              value={contextNotes}
+              onChangeText={(text) => setContextNotes(text.slice(0, 50))}
+              placeholder="Any details? (50 char max)"
+              placeholderTextColor="#71717a"
+              maxLength={50}
+            />
+            <Text style={styles.charCount}>
+              {contextNotes.length}/50
+            </Text>
           </View>
 
           {/* Save Button */}
@@ -242,7 +259,7 @@ export default function PostDoseCheckInScreen() {
             disabled={isSaving}
           >
             <Text style={styles.saveText}>
-              {isSaving ? 'Saving...' : 'Save ✓'}
+              {isSaving ? 'Saving...' : 'Save reflection'}
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -319,41 +336,57 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     marginBottom: 32,
+    alignItems: 'center',
+  },
+  icon: {
+    fontSize: 48,
+    marginBottom: 12,
   },
   title: {
     color: '#ffffff',
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
-  },
-  subtitle: {
-    color: '#a1a1aa',
-    fontSize: 16,
+    textAlign: 'center',
   },
   slidersSection: {
     marginBottom: 24,
   },
-  notesSection: {
+  contextSection: {
     marginBottom: 32,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#27272a',
   },
-  notesLabel: {
+  contextLabel: {
     color: '#a1a1aa',
-    fontSize: 14,
-    marginBottom: 8,
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
   },
-  notesInput: {
+  contextHint: {
+    color: '#71717a',
+    fontSize: 12,
+    marginBottom: 16,
+  },
+  contextInput: {
     backgroundColor: '#18181b',
     borderRadius: 12,
     padding: 14,
     color: '#ffffff',
     fontSize: 16,
-    minHeight: 60,
-    maxHeight: 80,
     borderWidth: 1,
     borderColor: '#27272a',
+    marginTop: 12,
+  },
+  charCount: {
+    color: '#71717a',
+    fontSize: 12,
+    textAlign: 'right',
+    marginTop: 4,
   },
   saveButton: {
-    backgroundColor: '#8b5cf6',
+    backgroundColor: '#6366f1',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',

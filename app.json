@@ -13,7 +13,12 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs camera access to scan QR codes on your Psilly bottles.",
+        "NSCalendarsUsageDescription": "This app needs calendar access to schedule reliable reminders for your post-dose check-ins.",
+        "NSRemindersUsageDescription": "This app needs access to create reminders for your post-dose check-ins."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,10 +26,29 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "CAMERA",
+        "READ_CALENDAR",
+        "WRITE_CALENDAR"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Psilly Journal to access your camera to scan QR codes on your bottles."
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Allow Psilly Journal to access your calendar to schedule reliable reminders for your post-dose check-ins."
+        }
+      ]
+    ]
   }
 }

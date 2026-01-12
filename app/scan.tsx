@@ -21,7 +21,7 @@ export default function ScanScreen() {
     try {
       // Unlock mode - check if token matches any stored bottle
       if (isUnlockMode) {
-        const bottles = localStorageDB.bottles.getAll();
+        const bottles = await localStorageDB.bottles.getAll();
         const matchingBottle = bottles.find(b => b.bottleToken === token);
 
         if (matchingBottle) {

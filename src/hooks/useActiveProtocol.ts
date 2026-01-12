@@ -7,8 +7,8 @@ export function useActiveProtocol() {
 
   useEffect(() => {
     // Load active protocol on mount
-    const loadProtocol = () => {
-      const protocols = localStorageDB.protocols.query(p => p.status === 'active');
+    const loadProtocol = async () => {
+      const protocols = await localStorageDB.protocols.query(p => p.status === 'active');
       const active = protocols.length > 0 ? protocols[0] : null;
       setProtocol(active);
       setIsLoading(false);

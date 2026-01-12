@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 1,
+  version: 3,
   tables: [
     // Bottles table - stores QR tokens locally (NEVER transmitted)
     tableSchema({
@@ -54,6 +54,11 @@ export const schema = appSchema({
         // Check-in fields
         { name: 'pre_dose_state', type: 'string', isOptional: true }, // Single word - LOCAL ONLY
         { name: 'post_dose_metrics', type: 'string', isOptional: true }, // JSON: {energy, clarity, mood}
+        { name: 'context_activity', type: 'string', isOptional: true }, // JSON array of tag IDs - LOCAL ONLY
+        { name: 'context_notes', type: 'string', isOptional: true }, // Free text (50 char max) - LOCAL ONLY
+        { name: 'check_in_completed', type: 'boolean', isOptional: true }, // Check-in completion status
+        { name: 'reflection_prompt_id', type: 'string', isOptional: true }, // ID of prompt shown - LOCAL ONLY
+        { name: 'reflection_prompt_text', type: 'string', isOptional: true }, // Text of prompt shown - LOCAL ONLY
       ],
     }),
 

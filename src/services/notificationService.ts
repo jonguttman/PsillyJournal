@@ -1,17 +1,21 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { storage } from '../utils/storage';
 
 // Check if running on web platform
 const isWeb = Platform.OS === 'web';
 
 /**
  * Notification timing presets in milliseconds
+ *
+ * NOTE: Calendar reminders are now the primary method (more reliable).
+ * These notifications serve as a fallback for web or users who decline calendar.
  */
 export const NOTIFICATION_TIMING = {
-  '2h': 2 * 60 * 60 * 1000,   // 7,200,000
-  '4h': 4 * 60 * 60 * 1000,   // 14,400,000 (default)
-  '6h': 6 * 60 * 60 * 1000,   // 21,600,000
-  '8h': 8 * 60 * 60 * 1000,   // 28,800,000
+  '2h': 2 * 60 * 60 * 1000,   // 7,200,000 ms
+  '4h': 4 * 60 * 60 * 1000,   // 14,400,000 ms (default)
+  '6h': 6 * 60 * 60 * 1000,   // 21,600,000 ms
+  '8h': 8 * 60 * 60 * 1000,   // 28,800,000 ms
 } as const;
 
 export type NotificationTiming = keyof typeof NOTIFICATION_TIMING;
@@ -23,11 +27,11 @@ const notificationIdMap = new Map<string, string>();
 const NOTIFICATION_IDS_KEY = 'psilly_notification_ids';
 
 /**
- * Load notification IDs from localStorage
+ * Load notification IDs from storage
  */
-function loadNotificationIds(): void {
+async function loadNotificationIds(): Promise<void> {
   try {
-    const stored = localStorage.getItem(NOTIFICATION_IDS_KEY);
+    const stored = await storage.getItem(NOTIFICATION_IDS_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as Record<string, string>;
       Object.entries(parsed).forEach(([doseId, notifId]) => {
@@ -40,24 +44,22 @@ function loadNotificationIds(): void {
 }
 
 /**
- * Save notification IDs to localStorage
+ * Save notification IDs to storage
  */
-function saveNotificationIds(): void {
+async function saveNotificationIds(): Promise<void> {
   try {
     const obj: Record<string, string> = {};
     notificationIdMap.forEach((notifId, doseId) => {
       obj[doseId] = notifId;
     });
-    localStorage.setItem(NOTIFICATION_IDS_KEY, JSON.stringify(obj));
+    await storage.setItem(NOTIFICATION_IDS_KEY, JSON.stringify(obj));
   } catch (e) {
     console.warn('[NotificationService] Failed to save notification IDs:', e);
   }
 }
 
-// Load on module init
-if (typeof localStorage !== 'undefined') {
-  loadNotificationIds();
-}
+// Load on module init (async, fire-and-forget)
+loadNotificationIds().catch(console.error);
 
 /**
  * Configure notification handler (call once on app start)
@@ -137,9 +139,9 @@ export async function schedulePostDoseReminder(
         });
       }
     }, secondsFromNow * 1000);
-    
+
     const webNotifId = `web-${timeoutId}`;
-    storeNotificationId(doseId, webNotifId);
+    await storeNotificationId(doseId, webNotifId);
     return webNotifId;
   }
 
@@ -163,8 +165,8 @@ export async function schedulePostDoseReminder(
   });
 
   console.log(`[NotificationService] Scheduled notification ${notificationId} in ${secondsFromNow}s`);
-  storeNotificationId(doseId, notificationId);
-  
+  await storeNotificationId(doseId, notificationId);
+
   return notificationId;
 }
 
@@ -198,16 +200,16 @@ export async function cancelReminderForDose(doseId: string): Promise<void> {
   if (notificationId) {
     await cancelPostDoseReminder(notificationId);
     notificationIdMap.delete(doseId);
-    saveNotificationIds();
+    await saveNotificationIds();
   }
 }
 
 /**
  * Store notification ID for a dose
  */
-export function storeNotificationId(doseId: string, notificationId: string): void {
+export async function storeNotificationId(doseId: string, notificationId: string): Promise<void> {
   notificationIdMap.set(doseId, notificationId);
-  saveNotificationIds();
+  await saveNotificationIds();
 }
 
 /**

@@ -6,19 +6,20 @@ import { createBottleAndProtocol } from '../src/services/bottleService';
 import { generateRecoveryKey } from '../src/utils/crypto';
 import * as SecureStore from 'expo-secure-store';
 import { STORAGE_KEYS } from '../src/config';
+import { storage as appStorage } from '../src/utils/storage';
 
 // Web fallback for SecureStore (which only works on native)
 const storage = {
   setItem: async (key: string, value: string) => {
     if (Platform.OS === 'web') {
-      localStorage.setItem(key, value);
+      await appStorage.setItem(key, value);
     } else {
       await SecureStore.setItemAsync(key, value);
     }
   },
   getItem: async (key: string) => {
     if (Platform.OS === 'web') {
-      return localStorage.getItem(key);
+      return appStorage.getItem(key);
     }
     return SecureStore.getItemAsync(key);
   },

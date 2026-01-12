@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { createCheckInEntry } from '../../src/services/entryService';
 import { schedulePostDoseReminder } from '../../src/services/notificationService';
+import { calendarService } from '../../src/services/calendarService';
 import { useAppStore } from '../../src/store/appStore';
 import { localStorageDB } from '../../src/db/localStorageDB';
 
-const EXAMPLE_WORDS = ['Good', 'Okay', 'Low', 'Stressed', 'Excited', 'Meh'];
+const EXAMPLE_WORDS = ['tired', 'curious', 'anxious', 'hopeful', 'calm'];
 
 export default function PreDoseCheckInScreen() {
   const router = useRouter();
@@ -30,14 +32,26 @@ export default function PreDoseCheckInScreen() {
   const { notificationTiming } = useAppStore();
   const [preDoseState, setPreDoseState] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [showCalendarPrompt, setShowCalendarPrompt] = useState(false);
+
+  // Check if we should show first-time calendar prompt
+  useEffect(() => {
+    const checkCalendarPrompt = async () => {
+      const shouldShow = await calendarService.shouldShowPrompt();
+      if (shouldShow) {
+        setShowCalendarPrompt(true);
+      }
+    };
+    checkCalendarPrompt();
+  }, []);
 
   const doseId = params.dose_id;
   const protocolId = params.protocol_id;
   const dayNumber = parseInt(params.day_number || '1', 10);
 
   // Get the dose timestamp
-  const getDoseTimestamp = (): number => {
-    const dose = localStorageDB.doses.find(doseId);
+  const getDoseTimestamp = async (): Promise<number> => {
+    const dose = await localStorageDB.doses.find(doseId);
     return dose?.timestamp || Date.now();
   };
 
@@ -54,12 +68,19 @@ export default function PreDoseCheckInScreen() {
     };
 
     const handleNo = async () => {
-      await schedulePostDoseReminder(
-        doseId,
-        entry.id,
-        doseTimestamp,
-        notificationTiming
-      );
+      // Hybrid approach: Try calendar first (more reliable), fall back to notifications
+      const calendarScheduled = await calendarService.scheduleReminder(doseId, doseTimestamp);
+
+      if (!calendarScheduled) {
+        // Calendar not available or disabled - use notification as fallback
+        await schedulePostDoseReminder(
+          doseId,
+          entry.id,
+          doseTimestamp,
+          notificationTiming
+        );
+      }
+
       router.replace('/');
     };
 
@@ -88,8 +109,8 @@ export default function PreDoseCheckInScreen() {
     setIsSaving(true);
 
     try {
-      const doseTimestamp = getDoseTimestamp();
-      
+      const doseTimestamp = await getDoseTimestamp();
+
       // Create check-in entry
       const entry = await createCheckInEntry({
         protocolId,
@@ -142,8 +163,8 @@ export default function PreDoseCheckInScreen() {
     setIsSaving(true);
 
     try {
-      const doseTimestamp = getDoseTimestamp();
-      
+      const doseTimestamp = await getDoseTimestamp();
+
       // Create check-in entry with null pre-dose state
       const entry = await createCheckInEntry({
         protocolId,
@@ -216,8 +237,9 @@ export default function PreDoseCheckInScreen() {
 
           {/* Title */}
           <View style={styles.titleSection}>
-            <Text style={styles.title}>How do you feel right now?</Text>
-            <Text style={styles.subtitle}>One word to describe your current state</Text>
+            <Text style={styles.icon}>🌱</Text>
+            <Text style={styles.title}>Before you begin</Text>
+            <Text style={styles.subtitle}>How are you feeling right now?</Text>
           </View>
 
           {/* Input */}
@@ -269,11 +291,58 @@ export default function PreDoseCheckInScreen() {
             disabled={!preDoseState.trim() || isSaving}
           >
             <Text style={styles.continueText}>
-              {isSaving ? 'Saving...' : 'Continue →'}
+              {isSaving ? 'Saving...' : 'Continue to journal'}
             </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Calendar Reminder Prompt (First Time Only - Native Only) */}
+      <Modal
+        visible={showCalendarPrompt}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCalendarPrompt(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalIcon}>📅</Text>
+            <Text style={styles.modalTitle}>Want reliable reminders?</Text>
+            <Text style={styles.modalText}>
+              Add check-in reminders to your calendar for the most reliable notifications.
+              {'\n\n'}
+              You'll get a reminder 4 hours after each dose to reflect on your experience.
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonPrimary]}
+              onPress={async () => {
+                await calendarService.setPreferences({ enabled: true, calendarId: null, promptShown: true });
+                setShowCalendarPrompt(false);
+                // Schedule for current dose if available
+                if (doseId) {
+                  const doseTimestamp = await getDoseTimestamp();
+                  await calendarService.scheduleReminder(doseId, doseTimestamp);
+                }
+              }}
+            >
+              <Text style={styles.modalButtonText}>Yes, add to calendar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={async () => {
+                await calendarService.markPromptShown();
+                setShowCalendarPrompt(false);
+              }}
+            >
+              <Text style={[styles.modalButtonText, styles.modalButtonTextSecondary]}>
+                No thanks
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -316,16 +385,23 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     marginBottom: 32,
+    alignItems: 'center',
+  },
+  icon: {
+    fontSize: 48,
+    marginBottom: 12,
   },
   title: {
     color: '#ffffff',
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
     color: '#a1a1aa',
     fontSize: 16,
+    textAlign: 'center',
   },
   input: {
     backgroundColor: '#18181b',
@@ -359,8 +435,8 @@ const styles = StyleSheet.create({
     borderColor: '#27272a',
   },
   chipSelected: {
-    backgroundColor: '#8b5cf6',
-    borderColor: '#8b5cf6',
+    backgroundColor: '#f59e0b',
+    borderColor: '#f59e0b',
   },
   chipText: {
     color: '#a1a1aa',
@@ -371,7 +447,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   continueButton: {
-    backgroundColor: '#8b5cf6',
+    backgroundColor: '#10b981',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -384,5 +460,61 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '600',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#18181b',
+    borderRadius: 16,
+    padding: 24,
+    maxWidth: 400,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#27272a',
+  },
+  modalIcon: {
+    fontSize: 48,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  modalText: {
+    color: '#a1a1aa',
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  modalButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#27272a',
+  },
+  modalButtonPrimary: {
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
+  },
+  modalButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonTextSecondary: {
+    color: '#a1a1aa',
   },
 });

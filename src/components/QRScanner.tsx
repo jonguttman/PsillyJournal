@@ -28,7 +28,13 @@ export function QRScanner({ onScan, onCancel, onManualEntry }: QRScannerProps) {
   useEffect(() => {
     setScanned(false);
     setError(null);
+    console.log('[QRScanner] Component mounted. Permission state:', permission);
   }, []);
+
+  // Log permission changes
+  useEffect(() => {
+    console.log('[QRScanner] Permission changed:', permission);
+  }, [permission]);
 
   /**
    * Handle barcode scan
@@ -75,12 +81,39 @@ export function QRScanner({ onScan, onCancel, onManualEntry }: QRScannerProps) {
     );
   }
 
+  // Handle permission request
+  const handleRequestPermission = async () => {
+    console.log('[QRScanner] Requesting camera permission...');
+    try {
+      const result = await requestPermission();
+      console.log('[QRScanner] Permission result:', result);
+
+      if (!result.granted) {
+        console.log('[QRScanner] Permission denied by user');
+        Alert.alert(
+          'Camera Access Required',
+          'Please enable camera access in Settings to scan QR codes.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        console.log('[QRScanner] Permission granted!');
+      }
+    } catch (error) {
+      console.error('[QRScanner] Error requesting permission:', error);
+      Alert.alert(
+        'Error',
+        'Failed to request camera permission. Error: ' + error,
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   // Handle permission denied
   if (!permission.granted) {
     return (
       <View style={styles.container}>
         <Text style={styles.message}>Camera permission is required to scan QR codes.</Text>
-        <TouchableOpacity style={styles.button} onPress={requestPermission}>
+        <TouchableOpacity style={styles.button} onPress={handleRequestPermission}>
           <Text style={styles.buttonText}>Grant Permission</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.secondaryButton} onPress={onCancel}>

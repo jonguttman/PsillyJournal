@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,9 @@ import { useRouter } from 'expo-router';
 import { useActiveProtocol } from '../../src/hooks';
 import { createEntry } from '../../src/services/entryService';
 import { MetricSlider } from '../../src/components/MetricSlider';
+import { promptService } from '../../src/services/promptService';
 import type { ReflectionMetrics } from '../../src/types';
+import type { ReflectionPrompt } from '../../src/data/prompts';
 
 export default function NewEntryScreen() {
   const router = useRouter();
@@ -27,6 +29,22 @@ export default function NewEntryScreen() {
     mood: 3,
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [currentPrompt, setCurrentPrompt] = useState<ReflectionPrompt | null>(null);
+
+  // Load a reflection prompt when the screen mounts
+  useEffect(() => {
+    loadPrompt();
+  }, []);
+
+  const loadPrompt = async () => {
+    const prompt = await promptService.getNextPrompt();
+    setCurrentPrompt(prompt);
+  };
+
+  const refreshPrompt = async () => {
+    const prompt = await promptService.getNextPrompt();
+    setCurrentPrompt(prompt);
+  };
 
   if (!protocol) {
     return (
@@ -51,7 +69,14 @@ export default function NewEntryScreen() {
         metrics,
         isDoseDay: true, // TODO: Check if dose was logged today
         tags: [],
+        reflectionPromptId: currentPrompt?.id,
+        reflectionPromptText: currentPrompt?.text,
       });
+
+      // Mark prompt as seen after successfully saving
+      if (currentPrompt) {
+        await promptService.markSeen(currentPrompt.id);
+      }
 
       router.back();
     } catch (error) {
@@ -86,6 +111,20 @@ export default function NewEntryScreen() {
             <Text style={styles.saveText}>{isSaving ? 'Saving...' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Reflection Prompt */}
+        {currentPrompt && (
+          <View style={styles.promptContainer}>
+            <View style={styles.promptHeader}>
+              <Text style={styles.promptEmoji}>💭</Text>
+              <Text style={styles.promptLabel}>Reflect on...</Text>
+            </View>
+            <Text style={styles.promptText}>{currentPrompt.text}</Text>
+            <TouchableOpacity onPress={refreshPrompt} style={styles.refreshButton}>
+              <Text style={styles.refreshText}>↻ Different prompt</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Journal Content */}
         <View style={styles.section}>
@@ -215,5 +254,46 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  promptContainer: {
+    backgroundColor: '#18181b',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderLeftWidth: 3,
+    borderLeftColor: '#8b5cf6',
+  },
+  promptHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  promptEmoji: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  promptLabel: {
+    color: '#a1a1aa',
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  promptText: {
+    color: '#ffffff',
+    fontSize: 16,
+    lineHeight: 24,
+    fontStyle: 'italic',
+    marginBottom: 12,
+  },
+  refreshButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  refreshText: {
+    color: '#8b5cf6',
+    fontSize: 13,
+    fontWeight: '500',
   },
 });

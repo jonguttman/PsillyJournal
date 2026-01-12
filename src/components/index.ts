@@ -6,3 +6,5 @@ export { EmptyProtocolCard } from './EmptyProtocolCard';
 export { EntryCard } from './EntryCard';
 export { MetricSlider } from './MetricSlider';
 export { PinInput } from './PinInput';
+export { ActivityTagSelector, ACTIVITY_TAGS } from './ActivityTagSelector';
+export type { ActivityTag } from './ActivityTagSelector';

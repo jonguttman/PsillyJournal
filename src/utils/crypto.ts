@@ -2,6 +2,7 @@ import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { SessionId, QRToken } from '../types';
+import { storage as appStorage } from './storage';
 
 const DEVICE_ID_KEY = 'psilly_device_id';
 const SALT_KEY = 'psilly_salt';
@@ -10,14 +11,14 @@ const SALT_KEY = 'psilly_salt';
 const storage = {
   setItem: async (key: string, value: string) => {
     if (Platform.OS === 'web') {
-      localStorage.setItem(key, value);
+      await appStorage.setItem(key, value);
     } else {
       await SecureStore.setItemAsync(key, value);
     }
   },
   getItem: async (key: string): Promise<string | null> => {
     if (Platform.OS === 'web') {
-      return localStorage.getItem(key);
+      return appStorage.getItem(key);
     }
     return SecureStore.getItemAsync(key);
   },

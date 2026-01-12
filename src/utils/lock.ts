@@ -1,22 +1,26 @@
 import { Platform } from 'react-native';
 import { STORAGE_KEYS } from '../config';
+import { storage as appStorage } from './storage';
 
 /**
- * Storage wrapper for PIN hash (web localStorage or SecureStore for native)
+ * Storage wrapper for PIN hash (web AsyncStorage or SecureStore for native)
+ *
+ * NOTE: Uses SecureStore on native for additional encryption.
+ * Uses our cross-platform storage wrapper on web.
  */
 const storage = {
   setItem: async (key: string, value: string) => {
     if (Platform.OS === 'web') {
-      localStorage.setItem(key, value);
+      await appStorage.setItem(key, value);
     } else {
-      // For future native support
+      // Use SecureStore for PIN data on native (encrypted storage)
       const SecureStore = await import('expo-secure-store');
       await SecureStore.setItemAsync(key, value);
     }
   },
   getItem: async (key: string): Promise<string | null> => {
     if (Platform.OS === 'web') {
-      return localStorage.getItem(key);
+      return appStorage.getItem(key);
     } else {
       const SecureStore = await import('expo-secure-store');
       return SecureStore.getItemAsync(key);
@@ -24,7 +28,7 @@ const storage = {
   },
   removeItem: async (key: string) => {
     if (Platform.OS === 'web') {
-      localStorage.removeItem(key);
+      await appStorage.removeItem(key);
     } else {
       const SecureStore = await import('expo-secure-store');
       await SecureStore.deleteItemAsync(key);

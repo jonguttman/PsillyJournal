@@ -2,6 +2,7 @@ import { Database } from '@nozbe/watermelondb';
 import LokiJSAdapter from '@nozbe/watermelondb/adapters/lokijs';
 
 import schema from './schema';
+import migrations from './schema/migrations';
 import { Bottle, Protocol, Entry, Dose, SyncQueue } from './models';
 
 /**
@@ -13,11 +14,10 @@ import { Bottle, Protocol, Entry, Dose, SyncQueue } from './models';
  */
 const adapter = new LokiJSAdapter({
   schema,
+  migrations,
   useWebWorker: false,
   useIncrementalIndexedDB: true,
   dbName: 'psillyjournal',
-  autosave: true,
-  autosaveInterval: 250, // Save every 250ms
   // Prevent destructive resets
   extraIncrementalIDBOptions: {
     onDidOverwrite: () => console.log('[🍉] [Loki] Database overwritten'),

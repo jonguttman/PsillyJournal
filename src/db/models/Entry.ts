@@ -74,6 +74,17 @@ export default class Entry extends Model {
   // JSON: { energy: 1-10, clarity: 1-10, mood: 1-10 }
   @json('post_dose_metrics', (raw) => raw || null) postDoseMetrics?: PostDoseMetrics | null;
 
+  // Context capture fields (for post-dose check-in)
+  // ⚠️ LOCAL ONLY - Never sync to cloud
+  @field('context_activity') contextActivity?: string; // JSON array of tag IDs (moving, still, social, etc.)
+  @field('context_notes') contextNotes?: string;       // Free text (50 char max)
+  @field('check_in_completed') checkInCompleted?: boolean; // Whether check-in is fully complete
+
+  // Reflection prompt fields (for journal entry)
+  // ⚠️ LOCAL ONLY - Never sync to cloud
+  @field('reflection_prompt_id') reflectionPromptId?: string;   // ID of prompt shown
+  @field('reflection_prompt_text') reflectionPromptText?: string; // Text of prompt shown
+
   // Relations
   @relation('protocols', 'protocol_id') protocol!: Relation<Protocol>;
   @relation('doses', 'dose_id') dose?: Relation<Dose>;
@@ -132,6 +143,18 @@ export default class Entry extends Model {
    */
   get hasPreDoseState(): boolean {
     return typeof this.preDoseState === 'string' && this.preDoseState.length > 0;
+  }
+
+  /**
+   * Get context activity tags as array
+   */
+  get contextActivityArray(): string[] {
+    if (!this.contextActivity) return [];
+    try {
+      return JSON.parse(this.contextActivity) || [];
+    } catch {
+      return [];
+    }
   }
 
   /**

@@ -122,7 +122,7 @@ export const useAppStore = create<AppState>((set) => ({
     lockTimestamp: locked ? Date.now() : null
   }),
 
-  reset: () => set(initialState),
+  reset: () => set({ ...initialState }),
 }));
 
 /**
