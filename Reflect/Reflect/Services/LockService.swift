@@ -65,6 +65,7 @@ final class LockService: ObservableObject {
         case .faceID: return "Face ID"
         case .touchID: return "Touch ID"
         case .opticID: return "Optic ID"
+        case .none: return "Passcode"
         @unknown default: return "Passcode"
         }
     }
