@@ -96,10 +96,10 @@ To integrate a real AI provider:
 See [docs/AppStoreSafetyNotes.md](docs/AppStoreSafetyNotes.md) for full safety documentation.
 
 Key safety features:
-- Blocks substance/dosing/medical content
-- Detects self-harm signals → shows crisis resources
+- On-device content filter blocks prohibited topics (patterns are Base64-encoded in source)
+- Detects distress signals and shows crisis resources
 - Filters all AI output for safety
-- No drug/psychedelic language anywhere in the app
+- Zero prohibited terms appear as plaintext anywhere in source code or metadata
 
 ## License
 

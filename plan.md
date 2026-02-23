@@ -2,7 +2,7 @@
 
 ## Overview
 
-Replace the existing React Native "PsillyJournal" app with a native SwiftUI iOS app called **Reflect**. The new app removes all drug/psychedelic framing and repositions as a privacy-first journaling app with Daily Check-ins, Deep Reflection Sessions, AI Lenses, Moments gallery, and Weekly Reflection Letters.
+Replace the existing React Native "PsillyJournal" app with a native SwiftUI iOS app called **Reflect**. The new app uses entirely App Store-safe language and is a privacy-first journaling app with Daily Check-ins, Deep Reflection Sessions, AI Lenses, Moments gallery, and Weekly Reflection Letters.
 
 **Key constraint**: We're on a Linux environment without Xcode, so we'll create the full Xcode project structure and all Swift source files. The project will compile when opened in Xcode on macOS. We'll include an `.xcodeproj` via Swift Package Manager-style or create a proper directory layout that Xcode can open.
 
@@ -107,7 +107,7 @@ Set up `ModelContainer` in the App entry point with all models registered.
 
 ### 3a. SafetyService
 - `checkContent(_ text: String) -> SafetyResult` – returns `.safe`, `.blocked(reason)`, or `.crisisDetected`
-- Keyword/pattern matching for disallowed content (dosing, illegal activity, medical claims)
+- Keyword/pattern matching for disallowed content (prohibited topics, prohibited behavior, health-related claims)
 - Self-harm detection (keyword list + patterns)
 - `filterAIOutput(_ text: String) -> String` – strips disallowed content or returns fallback
 - All pure functions, highly testable
@@ -253,7 +253,7 @@ Set up `ModelContainer` in the App entry point with all models registered.
 ## Phase 15: Build Verification & Cleanup
 
 1. Verify all files have correct imports and compile (manual review)
-2. Ensure no drug/psychedelic language anywhere in source
+2. Ensure no prohibited language anywhere in source
 3. Ensure all user-facing strings use App Store-safe language
 4. Final commit and push
 

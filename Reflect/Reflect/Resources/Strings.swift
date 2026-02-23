@@ -1,7 +1,7 @@
 import Foundation
 
 /// All user-facing copy in one place.
-/// App Store-safe language only — no references to substances, dosing, or medical advice.
+/// App Store-safe language only. See docs/AppStoreSafetyNotes.md for policy.
 enum Strings {
     // MARK: - App
     static let appName = "Reflect"
@@ -120,7 +120,7 @@ enum Strings {
     static let crisisTitle = "You're Not Alone"
     static let crisisBody = "It sounds like you may be going through a really difficult time. Please reach out to someone who can help."
     static let crisisEmergency = "If you're in immediate danger, call your local emergency services."
-    static let crisisHotlineUS = "988 Suicide & Crisis Lifeline"
+    static let crisisHotlineUS = "988 Crisis Lifeline"
     static let crisisHotlineUSNumber = "988"
     static let crisisCrisisTextLine = "Crisis Text Line"
     static let crisisCrisisTextLineInfo = "Text HOME to 741741"

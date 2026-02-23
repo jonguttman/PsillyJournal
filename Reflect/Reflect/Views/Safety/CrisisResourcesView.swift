@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Presented when self-harm intent is detected in user input.
+/// Presented when distress signals are detected in user input.
 /// Shows emergency resources and crisis hotlines.
 struct CrisisResourcesView: View {
     @Environment(\.dismiss) private var dismiss
@@ -44,7 +44,7 @@ struct CrisisResourcesView: View {
 
                     // Resources
                     VStack(spacing: Spacing.md) {
-                        // 988 Suicide & Crisis Lifeline
+                        // National crisis hotline
                         crisisResourceCard(
                             title: Strings.crisisHotlineUS,
                             detail: "Call or text \(Strings.crisisHotlineUSNumber)",

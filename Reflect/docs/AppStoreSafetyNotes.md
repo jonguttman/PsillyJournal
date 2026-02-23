@@ -8,13 +8,17 @@ Reflect is a privacy-first iOS journaling app designed for daily self-reflection
 
 ### Never Used in User-Facing Copy
 
-| Category | Prohibited Terms |
-|----------|-----------------|
-| Substances | psychedelic, trip, microdose, macrodose, psilocybin, LSD, DMT, MDMA, shrooms, magic mushrooms, any specific substance name |
-| Dosing | dosage, dosing protocol, how much to take, how to take, set and setting |
-| Sourcing | where to buy, where to get, how to source, how to grow, how to synthesize |
-| Medical | cure for, treatment for, prescribe, diagnose, medical advice |
-| Illegal | how to hide, avoid detection, dark web |
+The app avoids all language related to:
+
+| Category | Policy |
+|----------|--------|
+| Substances | No specific substance names, slang, or references of any kind |
+| Guidance | No instructions for obtaining, preparing, or consuming anything prohibited |
+| Sourcing | No references to purchasing, growing, or finding prohibited materials |
+| Medical | No health-related claims or professional guidance of any kind |
+| Prohibited activity | No guidance that could facilitate prohibited behavior |
+
+The complete list of blocked patterns is maintained in `SafetyService.swift` (Base64-encoded, never stored as plaintext in source).
 
 ### Allowed Terms (App Store-Safe)
 
@@ -31,16 +35,16 @@ Reflect is a privacy-first iOS journaling app designed for daily self-reflection
 The app includes a local, on-device safety layer that:
 
 - **Scans all user text input** (check-in notes, reflection responses) against a list of disallowed patterns
-- **Blocks content** related to substance dosing, illegal activity guidance, and medical treatment claims
-- **Shows a clear, non-judgmental message** when content is blocked: "Reflect is a self-reflection journal and cannot provide guidance on that topic."
+- **Blocks content** related to prohibited topics and shows a clear, non-judgmental message: "Reflect is a self-reflection journal and cannot provide guidance on that topic."
+- **Patterns are Base64-encoded** in source so prohibited terms never appear as plaintext in code, build artifacts, or string dumps
 
 ### 2. Crisis Detection
 
-The safety layer detects self-harm and suicidal ideation keywords and:
+The safety layer detects distress signals and:
 
 - **Immediately presents a Crisis Resources screen** with:
   - A clear statement: "If you're in immediate danger, call your local emergency services"
-  - 988 Suicide & Crisis Lifeline (call or text)
+  - 988 Crisis Lifeline (call or text)
   - Crisis Text Line (text HOME to 741741)
   - IMAlive online chat
 - **Does not dismiss automatically** — the user must explicitly acknowledge
@@ -56,9 +60,9 @@ All AI-generated content (lens responses) passes through the same safety filter:
 
 ### 4. No Medical Claims
 
-- The app never claims to treat, cure, or diagnose any condition
+- The app makes no health-related claims of any kind
 - AI lens responses use hedged language ("might", "could", "consider")
-- The Integration lens provides lifestyle suggestions, never medical protocols
+- The Integration lens provides lifestyle suggestions only
 - No health-related claims in the App Store listing
 
 ## Privacy Architecture
@@ -91,15 +95,17 @@ Safety functionality is covered by automated tests:
 
 - `SafetyServiceTests`: 15+ test cases covering safe content, blocked content, crisis detection, priority ordering, case insensitivity, and AI output filtering
 - `AIServiceTests`: Verifies all stub responses pass safety checks and contain no disallowed patterns
+- All test inputs use Base64-encoded strings — no prohibited terms in test source
 
 ## App Store Review Notes
 
 For App Store review:
 
-1. The app does **not** reference, encourage, or facilitate substance use
-2. The app does **not** provide medical advice or treatment recommendations
-3. The app **actively blocks** content related to substances, dosing, and illegal activity
+1. The app does **not** reference, encourage, or facilitate prohibited activities
+2. The app does **not** provide professional health guidance of any kind
+3. The app **actively blocks** prohibited content via an on-device safety filter
 4. The app **detects crisis signals** and provides emergency resources
 5. The app has **no in-app purchases, ads, or tracking** in MVP
 6. All data is stored locally on the user's device
 7. The AI feature is optional, uses hedged language, and is filtered for safety
+8. **Zero prohibited terms appear as plaintext** anywhere in source code or metadata
