@@ -6,6 +6,7 @@ struct SettingsView: View {
     @EnvironmentObject var lockService: LockService
     @State private var viewModel = SettingsViewModel()
     @AppStorage("appLockEnabled") private var appLockEnabled = false
+    @State private var seedDataLoaded = false
 
     var body: some View {
         NavigationStack {
@@ -110,6 +111,29 @@ struct SettingsView: View {
                     }
                 }
                 .listRowBackground(AppColor.cardBackground)
+
+                #if DEBUG
+                // Developer
+                Section(header: sectionHeader("Developer")) {
+                    Button(action: {
+                        SeedDataService.populate(context: modelContext)
+                        seedDataLoaded = true
+                    }) {
+                        HStack(spacing: Spacing.md) {
+                            settingIcon("flask.fill", color: AppColor.warmIndigo)
+                            VStack(alignment: .leading) {
+                                Text("Load Sample Data")
+                                    .font(AppFont.body)
+                                    .foregroundColor(AppColor.label)
+                                Text(seedDataLoaded ? "Loaded! Restart app to see changes." : "14 days of check-ins, reflections, moments")
+                                    .font(AppFont.captionSecondary)
+                                    .foregroundColor(seedDataLoaded ? AppColor.sage : AppColor.secondaryLabel)
+                            }
+                        }
+                    }
+                }
+                .listRowBackground(AppColor.cardBackground)
+                #endif
 
                 // About
                 Section(header: sectionHeader(Strings.settingsAbout)) {

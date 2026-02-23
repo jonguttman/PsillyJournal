@@ -31,6 +31,15 @@ struct ReflectApp: App {
                     lockService.lock()
                 }
             }
+            #if DEBUG
+            .onAppear {
+                if !UserDefaults.standard.bool(forKey: "seedDataLoaded") {
+                    let context = PersistenceService.shared.container.mainContext
+                    SeedDataService.populate(context: context)
+                    UserDefaults.standard.set(true, forKey: "seedDataLoaded")
+                }
+            }
+            #endif
         }
         .modelContainer(PersistenceService.shared.container)
     }

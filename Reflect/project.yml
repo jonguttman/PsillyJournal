@@ -18,6 +18,8 @@ targets:
           - "**/.DS_Store"
     info:
       path: Reflect/Info.plist
+      properties:
+        UILaunchScreen: {}
     settings:
       base:
         INFOPLIST_FILE: Reflect/Info.plist
