@@ -18,6 +18,7 @@ struct ReflectTabView: View {
                 }
             }
             .warmBackground()
+            .toolbar(.hidden, for: .navigationBar)
             .navigationTitle(Strings.reflectTitle)
             .toolbar {
                 if !viewModel.isActive && !viewModel.sessions.isEmpty {

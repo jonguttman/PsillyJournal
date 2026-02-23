@@ -38,8 +38,7 @@ struct ContentView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Content
+        VStack(spacing: 0) {
             Group {
                 switch selectedTab {
                 case .today: TodayView()
@@ -51,23 +50,36 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Custom Tab Bar
             customTabBar
         }
-        .warmBackground()
+        .background(
+            ZStack {
+                AppColor.background
+                FractalTexture()
+            }
+            .ignoresSafeArea()
+        )
+        .ignoresSafeArea(edges: .bottom)
     }
 
     // MARK: - Custom Tab Bar
 
     private var customTabBar: some View {
-        HStack(spacing: 0) {
-            ForEach(AppTab.allCases, id: \.rawValue) { tab in
-                tabButton(tab)
+        VStack(spacing: 0) {
+            // Warm hairline separator
+            Rectangle()
+                .fill(AppColor.amber.opacity(0.15))
+                .frame(height: 0.5)
+
+            HStack(spacing: 0) {
+                ForEach(AppTab.allCases, id: \.rawValue) { tab in
+                    tabButton(tab)
+                }
             }
+            .padding(.horizontal, Spacing.sm)
+            .padding(.top, Spacing.md)
+            .padding(.bottom, Spacing.xl)
         }
-        .padding(.horizontal, Spacing.sm)
-        .padding(.top, Spacing.md)
-        .padding(.bottom, Spacing.xl)
         .background(
             AppColor.tabBarBackground
                 .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: -4)

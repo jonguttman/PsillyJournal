@@ -18,7 +18,13 @@ struct ReflectApp: App {
                         .environmentObject(lockService)
                 }
             }
-            .warmBackground()
+            .background(
+                ZStack {
+                    AppColor.background
+                    FractalTexture()
+                }
+                .ignoresSafeArea()
+            )
             .tint(AppColor.amber)
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .background && appLockEnabled {

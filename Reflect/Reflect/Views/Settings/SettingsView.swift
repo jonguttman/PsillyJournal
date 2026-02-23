@@ -137,6 +137,7 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .warmBackground()
+            .toolbar(.hidden, for: .navigationBar)
             .navigationTitle(Strings.settingsTitle)
             .onAppear { viewModel.setup(context: modelContext) }
             .alert(Strings.settingsDeleteAll, isPresented: $viewModel.showDeleteConfirmation) {

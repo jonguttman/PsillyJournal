@@ -1,0 +1,36 @@
+name: Reflect
+options:
+  bundleIdPrefix: com.psilly
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+targets:
+  Reflect:
+    type: application
+    platform: iOS
+    sources:
+      - path: Reflect
+        excludes:
+          - "**/.DS_Store"
+    info:
+      path: Reflect/Info.plist
+    settings:
+      base:
+        INFOPLIST_FILE: Reflect/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.psilly.reflect
+        DEVELOPMENT_TEAM: ""
+  ReflectTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: ReflectTests
+    dependencies:
+      - target: Reflect
+    settings:
+      base:
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Reflect.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Reflect"
+        BUNDLE_LOADER: "$(TEST_HOST)"

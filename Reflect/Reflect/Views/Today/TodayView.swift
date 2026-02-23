@@ -8,53 +8,53 @@ struct TodayView: View {
     @State private var editingCheckIn: CheckIn?
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.xl) {
-                    // Greeting
-                    greetingSection
-                        .fadeRise(delay: 0)
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                // Greeting
+                greetingSection
+                    .fadeRise(delay: 0)
 
-                    // Check-in CTA or today's summary
-                    Group {
-                        if viewModel.hasCheckedInToday, let checkIn = viewModel.todayCheckIn {
-                            todayCheckInCard(checkIn)
-                        } else {
-                            checkInCTA
-                        }
+                // Check-in CTA or today's summary
+                Group {
+                    if viewModel.hasCheckedInToday, let checkIn = viewModel.todayCheckIn {
+                        todayCheckInCard(checkIn)
+                    } else {
+                        checkInCTA
                     }
-                    .fadeRise(delay: 0.1)
-
-                    // Recent moment
-                    if let moment = viewModel.recentMoment {
-                        recentMomentCard(moment)
-                            .fadeRise(delay: 0.2)
-                    }
-
-                    // Recent check-ins
-                    if !viewModel.recentCheckIns.isEmpty {
-                        recentCheckInsSection
-                            .fadeRise(delay: 0.3)
-                    }
-
-                    // Bottom spacing for tab bar
-                    Spacer().frame(height: 80)
                 }
-                .padding(Spacing.lg)
-            }
-            .warmBackground()
-            .navigationTitle(Strings.tabToday)
-            .onAppear { viewModel.setup(context: modelContext) }
-            .sheet(isPresented: $showCheckInForm) {
-                CheckInFormView(editingCheckIn: editingCheckIn) {
-                    viewModel.refresh()
-                    showCheckInForm = false
-                    editingCheckIn = nil
+                .fadeRise(delay: 0.1)
+
+                // Recent moment
+                if let moment = viewModel.recentMoment {
+                    recentMomentCard(moment)
+                        .fadeRise(delay: 0.2)
+                }
+
+                // Inspirational prompt when no content yet
+                if !viewModel.hasCheckedInToday && viewModel.recentCheckIns.isEmpty {
+                    dailyPrompt
+                        .fadeRise(delay: 0.25)
+                }
+
+                // Recent check-ins
+                if !viewModel.recentCheckIns.isEmpty {
+                    recentCheckInsSection
+                        .fadeRise(delay: 0.3)
                 }
             }
-            .onChange(of: showCheckInForm) { _, newValue in
-                if !newValue { editingCheckIn = nil }
+            .padding(.horizontal, Spacing.xl)
+            .padding(.top, Spacing.sm)
+        }
+        .onAppear { viewModel.setup(context: modelContext) }
+        .sheet(isPresented: $showCheckInForm) {
+            CheckInFormView(editingCheckIn: editingCheckIn) {
+                viewModel.refresh()
+                showCheckInForm = false
+                editingCheckIn = nil
             }
+        }
+        .onChange(of: showCheckInForm) { _, newValue in
+            if !newValue { editingCheckIn = nil }
         }
     }
 
@@ -103,6 +103,32 @@ struct TodayView: View {
         }
         .buttonStyle(.plain)
         .breathingPulse()
+    }
+
+    // MARK: - Daily Inspirational Prompt
+
+    private var dailyPrompt: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack {
+                Image(systemName: "leaf.fill")
+                    .font(.caption)
+                    .foregroundColor(AppColor.sage)
+                Text("Thought for today")
+                    .font(AppFont.caption)
+                    .foregroundColor(AppColor.sage)
+            }
+
+            Text("\u{201C}The real voyage of discovery consists not in seeking new landscapes, but in having new eyes.\u{201D}")
+                .font(.system(.callout, design: .serif))
+                .italic()
+                .foregroundColor(AppColor.secondaryLabel)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("— Marcel Proust")
+                .font(AppFont.captionSecondary)
+                .foregroundColor(AppColor.secondaryLabel.opacity(0.6))
+        }
+        .cardStyle()
     }
 
     // MARK: - Today's Check-in Card

@@ -15,6 +15,7 @@ struct MomentsGalleryView: View {
                 }
             }
             .navigationTitle(Strings.momentsTitle)
+            .toolbar(.hidden, for: .navigationBar)
             .warmBackground()
             .onAppear { viewModel.setup(context: modelContext) }
             .sheet(isPresented: $viewModel.showSaveMomentSheet) {

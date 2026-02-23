@@ -26,6 +26,7 @@ struct InsightsView: View {
                 .padding(Spacing.lg)
             }
             .warmBackground()
+            .toolbar(.hidden, for: .navigationBar)
             .navigationTitle(Strings.insightsTitle)
             .onAppear { viewModel.setup(context: modelContext) }
             .sheet(isPresented: $showWeeklyLetter) {
