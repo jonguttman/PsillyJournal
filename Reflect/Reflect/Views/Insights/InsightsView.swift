@@ -14,12 +14,18 @@ struct InsightsView: View {
                         emptyState
                     } else {
                         trendsSection
+                            .fadeRise(delay: 0)
                         averagesSection
+                            .fadeRise(delay: 0.1)
                         weeklyLetterSection
+                            .fadeRise(delay: 0.2)
                     }
+
+                    Spacer().frame(height: 80)
                 }
                 .padding(Spacing.lg)
             }
+            .warmBackground()
             .navigationTitle(Strings.insightsTitle)
             .onAppear { viewModel.setup(context: modelContext) }
             .sheet(isPresented: $showWeeklyLetter) {
@@ -55,7 +61,7 @@ struct InsightsView: View {
     // MARK: - Averages
 
     private var averagesSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
+        VStack(alignment: .leading, spacing: Spacing.lg) {
             Text("7-Day Averages")
                 .font(AppFont.headline)
                 .foregroundColor(AppColor.label)
@@ -87,9 +93,9 @@ struct InsightsView: View {
     }
 
     private func averageCard(label: String, value: Double, color: Color) -> some View {
-        VStack(spacing: Spacing.xxs) {
+        VStack(spacing: Spacing.xs) {
             Text(String(format: "%.1f", value))
-                .font(AppFont.headline)
+                .font(AppFont.metricLarge)
                 .foregroundColor(color)
                 .monospacedDigit()
             Text(label)
@@ -108,28 +114,36 @@ struct InsightsView: View {
                 .foregroundColor(AppColor.label)
 
             if let letter = viewModel.currentLetter {
-                // Show existing letter preview
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text(letter.dateRangeFormatted)
                         .font(AppFont.caption)
                         .foregroundColor(AppColor.secondaryLabel)
 
                     Text(letter.fullText)
-                        .font(AppFont.body)
+                        .font(.system(.body, design: .serif))
                         .foregroundColor(AppColor.secondaryLabel)
                         .lineLimit(6)
+
+                    // Warm separator
+                    Rectangle()
+                        .fill(AppColor.separator.opacity(0.3))
+                        .frame(height: 0.5)
+                        .padding(.vertical, Spacing.xs)
 
                     HStack {
                         Button(action: { showWeeklyLetter = true }) {
                             Text("Read Full Letter")
                                 .font(AppFont.callout)
+                                .foregroundColor(AppColor.amber)
                         }
                         Spacer()
                         Button(action: { viewModel.regenerateWeeklyLetter() }) {
                             Label(Strings.insightsRegenerateLetter, systemImage: "arrow.clockwise")
                                 .font(AppFont.caption)
+                                .foregroundColor(AppColor.secondaryLabel)
                         }
                         .buttonStyle(.bordered)
+                        .tint(AppColor.secondaryLabel)
                     }
                 }
                 .cardStyle()
@@ -152,9 +166,10 @@ struct InsightsView: View {
                             .font(.title2)
                             .foregroundColor(.white.opacity(0.9))
                     }
-                    .padding(Spacing.lg)
-                    .background(AppColor.primary)
+                    .padding(Spacing.xl)
+                    .background(AppGradient.warmCTA)
                     .cornerRadius(CornerRadius.lg)
+                    .shadow(color: AppColor.amber.opacity(0.2), radius: 8, x: 0, y: 4)
                 }
                 .buttonStyle(.plain)
                 .disabled(viewModel.isGeneratingLetter)

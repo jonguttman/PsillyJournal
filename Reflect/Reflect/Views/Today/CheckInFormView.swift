@@ -23,6 +23,7 @@ struct CheckInFormView: View {
                         color: AppColor.mood
                     )
                 }
+                .listRowBackground(AppColor.cardBackground)
 
                 // Energy
                 Section {
@@ -32,6 +33,7 @@ struct CheckInFormView: View {
                         color: AppColor.energy
                     )
                 }
+                .listRowBackground(AppColor.cardBackground)
 
                 // Stress
                 Section {
@@ -41,6 +43,7 @@ struct CheckInFormView: View {
                         color: AppColor.stress
                     )
                 }
+                .listRowBackground(AppColor.cardBackground)
 
                 // Sleep
                 Section {
@@ -48,9 +51,10 @@ struct CheckInFormView: View {
                         HStack {
                             Text(Strings.checkInSleepHours)
                                 .font(AppFont.callout)
+                                .foregroundColor(AppColor.label)
                             Spacer()
                             Text(String(format: "%.1f h", viewModel.sleepHours))
-                                .font(AppFont.headline)
+                                .font(AppFont.metricLarge)
                                 .foregroundColor(AppColor.sleep)
                                 .monospacedDigit()
                         }
@@ -63,15 +67,23 @@ struct CheckInFormView: View {
                         color: AppColor.sleep
                     )
                 }
+                .listRowBackground(AppColor.cardBackground)
 
                 // Note
-                Section(header: Text("Notes")) {
+                Section(header: Text("Notes")
+                    .font(AppFont.caption)
+                    .foregroundColor(AppColor.amber.opacity(0.8))
+                    .textCase(nil)
+                ) {
                     TextEditor(text: $viewModel.note)
+                        .font(AppFont.body)
+                        .foregroundColor(AppColor.label)
                         .frame(minHeight: 80)
                         .overlay(
                             Group {
                                 if viewModel.note.isEmpty {
                                     Text(Strings.checkInNote)
+                                        .font(AppFont.body)
                                         .foregroundColor(AppColor.secondaryLabel.opacity(0.5))
                                         .padding(.horizontal, 4)
                                         .padding(.vertical, 8)
@@ -81,11 +93,13 @@ struct CheckInFormView: View {
                             alignment: .topLeading
                         )
                 }
+                .listRowBackground(AppColor.cardBackground)
 
                 // Voice Note
                 Section {
                     VoiceNoteButton(voiceNotePath: $voiceNotePath)
                 }
+                .listRowBackground(AppColor.cardBackground)
 
                 // Delete (if editing)
                 if viewModel.isEditing {
@@ -103,13 +117,17 @@ struct CheckInFormView: View {
                             .foregroundColor(AppColor.danger)
                         }
                     }
+                    .listRowBackground(AppColor.cardBackground)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .warmBackground()
             .navigationTitle(viewModel.isEditing ? Strings.checkInEdit : Strings.checkInTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(Strings.cancel) { dismiss() }
+                        .foregroundColor(AppColor.secondaryLabel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(Strings.save) {
@@ -118,6 +136,7 @@ struct CheckInFormView: View {
                             onSave()
                         }
                     }
+                    .foregroundColor(AppColor.amber)
                     .disabled(viewModel.isSaving)
                 }
             }

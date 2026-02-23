@@ -1,11 +1,12 @@
 import SwiftUI
 
 /// A labeled slider for rating metrics on a 1–10 (or 0–10) scale.
+/// Quiet Depth: warm tint, serif value display, subtle track styling.
 struct MetricSliderView: View {
     let label: String
     @Binding var value: Int
     var range: ClosedRange<Int> = 1...10
-    var color: Color = AppColor.primary
+    var color: Color = AppColor.amber
     var showValue: Bool = true
 
     private var doubleValue: Binding<Double> {
@@ -16,17 +17,19 @@ struct MetricSliderView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            HStack {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(alignment: .lastTextBaseline) {
                 Text(label)
                     .font(AppFont.callout)
                     .foregroundColor(AppColor.label)
                 Spacer()
                 if showValue {
                     Text("\(value)")
-                        .font(AppFont.headline)
+                        .font(AppFont.metricLarge)
                         .foregroundColor(color)
                         .monospacedDigit()
+                        .contentTransition(.numericText())
+                        .animation(.easeInOut(duration: 0.2), value: value)
                 }
             }
             Slider(
@@ -50,25 +53,35 @@ struct MetricSliderView: View {
     }
 }
 
-/// A smaller metric display for read-only contexts.
+/// A warm metric display badge for read-only contexts.
+/// Quiet Depth: soft warm glow, serif numerals, rounded pill shape.
 struct MetricBadge: View {
     let label: String
     let value: Int
     var maxValue: Int = 10
-    var color: Color = AppColor.primary
+    var color: Color = AppColor.amber
 
     var body: some View {
-        VStack(spacing: Spacing.xxs) {
+        VStack(spacing: Spacing.xs) {
             Text("\(value)")
-                .font(AppFont.headline)
+                .font(AppFont.metricLarge)
                 .foregroundColor(color)
+                .monospacedDigit()
+
             Text(label)
                 .font(AppFont.captionSecondary)
                 .foregroundColor(AppColor.secondaryLabel)
         }
-        .frame(minWidth: 50)
-        .padding(Spacing.sm)
-        .background(color.opacity(0.1))
-        .cornerRadius(CornerRadius.sm)
+        .frame(minWidth: 54)
+        .padding(.vertical, Spacing.md)
+        .padding(.horizontal, Spacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.md)
+                .fill(color.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: CornerRadius.md)
+                        .stroke(color.opacity(0.15), lineWidth: 0.5)
+                )
+        )
     }
 }

@@ -15,6 +15,7 @@ struct MomentsGalleryView: View {
                 }
             }
             .navigationTitle(Strings.momentsTitle)
+            .warmBackground()
             .onAppear { viewModel.setup(context: modelContext) }
             .sheet(isPresented: $viewModel.showSaveMomentSheet) {
                 SaveMomentView(
@@ -40,21 +41,28 @@ struct MomentsGalleryView: View {
 
     private var momentsContent: some View {
         VStack(spacing: 0) {
-            // Search bar
-            HStack {
+            // Search bar — warm styling
+            HStack(spacing: Spacing.sm) {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(AppColor.secondaryLabel)
+                    .font(.system(size: 14))
                 TextField("Search moments...", text: $viewModel.searchText)
+                    .font(AppFont.body)
                 if !viewModel.searchText.isEmpty {
                     Button(action: { viewModel.searchText = "" }) {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(AppColor.secondaryLabel)
+                            .font(.system(size: 14))
                     }
                 }
             }
             .padding(Spacing.md)
-            .background(AppColor.secondaryBackground)
-            .cornerRadius(CornerRadius.sm)
+            .background(AppColor.cardBackground)
+            .cornerRadius(CornerRadius.md)
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.md)
+                    .stroke(AppColor.separator.opacity(0.3), lineWidth: 0.5)
+            )
             .padding(.horizontal, Spacing.lg)
             .padding(.top, Spacing.sm)
 
@@ -62,7 +70,6 @@ struct MomentsGalleryView: View {
             if !viewModel.allTags.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Spacing.sm) {
-                        // "All" chip
                         filterChip(label: "All", isSelected: viewModel.filterTag == nil) {
                             viewModel.clearFilters()
                         }
@@ -79,7 +86,7 @@ struct MomentsGalleryView: View {
                         }
                     }
                     .padding(.horizontal, Spacing.lg)
-                    .padding(.vertical, Spacing.sm)
+                    .padding(.vertical, Spacing.md)
                 }
             }
 
@@ -91,17 +98,16 @@ struct MomentsGalleryView: View {
                     .foregroundColor(AppColor.secondaryLabel)
                 Spacer()
             } else {
-                List {
-                    ForEach(viewModel.filteredMoments, id: \.id) { moment in
-                        MomentCardView(moment: moment)
-                    }
-                    .onDelete { indexSet in
-                        for index in indexSet {
-                            _ = viewModel.deleteMoment(viewModel.filteredMoments[index])
+                ScrollView {
+                    LazyVStack(spacing: Spacing.md) {
+                        ForEach(viewModel.filteredMoments, id: \.id) { moment in
+                            MomentCardView(moment: moment)
+                                .cardStyle()
                         }
                     }
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.bottom, 80) // Tab bar spacing
                 }
-                .listStyle(.insetGrouped)
             }
         }
     }
@@ -113,10 +119,14 @@ struct MomentsGalleryView: View {
             Text(label)
                 .font(AppFont.caption)
                 .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.xs)
-                .background(isSelected ? AppColor.primary.opacity(0.2) : AppColor.tertiaryBackground)
-                .foregroundColor(isSelected ? AppColor.primary : AppColor.secondaryLabel)
-                .cornerRadius(CornerRadius.xl)
+                .padding(.vertical, Spacing.sm)
+                .background(isSelected ? AppColor.amber.opacity(0.15) : AppColor.cardBackground)
+                .foregroundColor(isSelected ? AppColor.amber : AppColor.secondaryLabel)
+                .cornerRadius(CornerRadius.pill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: CornerRadius.pill)
+                        .stroke(isSelected ? AppColor.amber.opacity(0.3) : AppColor.separator.opacity(0.3), lineWidth: 0.5)
+                )
         }
         .buttonStyle(.plain)
     }

@@ -11,22 +11,24 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 // Privacy & Security
-                Section(header: Text(Strings.settingsPrivacy)) {
+                Section(header: sectionHeader(Strings.settingsPrivacy)) {
                     Toggle(isOn: $appLockEnabled) {
-                        HStack {
-                            Image(systemName: "lock.shield.fill")
-                                .foregroundColor(AppColor.primary)
+                        HStack(spacing: Spacing.md) {
+                            settingIcon("lock.shield.fill", color: AppColor.amber)
                             VStack(alignment: .leading) {
                                 Text(Strings.settingsAppLock)
+                                    .font(AppFont.body)
+                                    .foregroundColor(AppColor.label)
                                 Text(Strings.settingsAppLockDesc)
                                     .font(AppFont.captionSecondary)
                                     .foregroundColor(AppColor.secondaryLabel)
                             }
                         }
                     }
+                    .tint(AppColor.amber)
 
                     if !lockService.isAvailable {
-                        HStack {
+                        HStack(spacing: Spacing.sm) {
                             Image(systemName: "exclamationmark.triangle")
                                 .foregroundColor(AppColor.warning)
                             Text("Biometric authentication is not available on this device. App lock may use device passcode.")
@@ -35,15 +37,17 @@ struct SettingsView: View {
                         }
                     }
                 }
+                .listRowBackground(AppColor.cardBackground)
 
                 // AI
-                Section(header: Text(Strings.settingsAI)) {
+                Section(header: sectionHeader(Strings.settingsAI)) {
                     NavigationLink(destination: AISettingsView(viewModel: viewModel)) {
-                        HStack {
-                            Image(systemName: "sparkles")
-                                .foregroundColor(AppColor.meaningLens)
+                        HStack(spacing: Spacing.md) {
+                            settingIcon("sparkles", color: AppColor.warmIndigo)
                             VStack(alignment: .leading) {
                                 Text(Strings.aiEnabled)
+                                    .font(AppFont.body)
+                                    .foregroundColor(AppColor.label)
                                 Text(viewModel.preferences?.aiEnabled == true ? "Enabled" : "Disabled")
                                     .font(AppFont.captionSecondary)
                                     .foregroundColor(AppColor.secondaryLabel)
@@ -51,26 +55,39 @@ struct SettingsView: View {
                         }
                     }
                 }
+                .listRowBackground(AppColor.cardBackground)
 
                 // Boundaries
-                Section(header: Text(Strings.settingsBoundaries)) {
+                Section(header: sectionHeader(Strings.settingsBoundaries)) {
                     NavigationLink(destination: PrivacySettingsView(viewModel: viewModel)) {
-                        HStack {
-                            Image(systemName: "hand.raised.fill")
-                                .foregroundColor(AppColor.safe)
+                        HStack(spacing: Spacing.md) {
+                            settingIcon("hand.raised.fill", color: AppColor.sage)
                             Text(Strings.settingsAvoidTopics)
+                                .font(AppFont.body)
+                                .foregroundColor(AppColor.label)
                         }
                     }
                 }
+                .listRowBackground(AppColor.cardBackground)
 
                 // Data
-                Section(header: Text(Strings.settingsData)) {
+                Section(header: sectionHeader(Strings.settingsData)) {
                     Button(action: { viewModel.exportJSON() }) {
-                        Label(Strings.settingsExportJSON, systemImage: "doc.text")
+                        HStack(spacing: Spacing.md) {
+                            settingIcon("doc.text", color: AppColor.clay)
+                            Text(Strings.settingsExportJSON)
+                                .font(AppFont.body)
+                                .foregroundColor(AppColor.label)
+                        }
                     }
 
                     Button(action: { viewModel.exportText() }) {
-                        Label(Strings.settingsExportText, systemImage: "doc.plaintext")
+                        HStack(spacing: Spacing.md) {
+                            settingIcon("doc.plaintext", color: AppColor.clay)
+                            Text(Strings.settingsExportText)
+                                .font(AppFont.body)
+                                .foregroundColor(AppColor.label)
+                        }
                     }
 
                     if let date = viewModel.preferences?.lastExportDate {
@@ -79,32 +96,47 @@ struct SettingsView: View {
                             .foregroundColor(AppColor.secondaryLabel)
                     }
                 }
+                .listRowBackground(AppColor.cardBackground)
 
                 // Delete All
                 Section {
                     Button(role: .destructive, action: { viewModel.showDeleteConfirmation = true }) {
-                        Label(Strings.settingsDeleteAll, systemImage: "trash")
-                            .foregroundColor(AppColor.danger)
+                        HStack(spacing: Spacing.md) {
+                            settingIcon("trash", color: AppColor.danger)
+                            Text(Strings.settingsDeleteAll)
+                                .font(AppFont.body)
+                                .foregroundColor(AppColor.danger)
+                        }
                     }
                 }
+                .listRowBackground(AppColor.cardBackground)
 
                 // About
-                Section(header: Text(Strings.settingsAbout)) {
+                Section(header: sectionHeader(Strings.settingsAbout)) {
                     HStack {
                         Text(Strings.appName)
+                            .font(AppFont.body)
+                            .foregroundColor(AppColor.label)
                         Spacer()
                         Text(Strings.appTagline)
-                            .font(AppFont.caption)
+                            .font(.system(.caption, design: .serif))
+                            .italic()
                             .foregroundColor(AppColor.secondaryLabel)
                     }
                     HStack {
                         Text(Strings.settingsVersion)
+                            .font(AppFont.body)
+                            .foregroundColor(AppColor.label)
                         Spacer()
                         Text("1.0.0")
+                            .font(AppFont.caption)
                             .foregroundColor(AppColor.secondaryLabel)
                     }
                 }
+                .listRowBackground(AppColor.cardBackground)
             }
+            .scrollContentBackground(.hidden)
+            .warmBackground()
             .navigationTitle(Strings.settingsTitle)
             .onAppear { viewModel.setup(context: modelContext) }
             .alert(Strings.settingsDeleteAll, isPresented: $viewModel.showDeleteConfirmation) {
@@ -121,5 +153,23 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Helpers
+
+    private func sectionHeader(_ text: String) -> some View {
+        Text(text)
+            .font(AppFont.caption)
+            .foregroundColor(AppColor.amber.opacity(0.8))
+            .textCase(nil)
+    }
+
+    private func settingIcon(_ name: String, color: Color) -> some View {
+        Image(systemName: name)
+            .font(.system(size: 14))
+            .foregroundColor(color)
+            .frame(width: 28, height: 28)
+            .background(color.opacity(0.1))
+            .cornerRadius(CornerRadius.sm)
     }
 }

@@ -17,12 +17,14 @@ struct ReflectTabView: View {
                     sessionsList
                 }
             }
+            .warmBackground()
             .navigationTitle(Strings.reflectTitle)
             .toolbar {
                 if !viewModel.isActive && !viewModel.sessions.isEmpty {
                     ToolbarItem(placement: .primaryAction) {
                         Button(action: { viewModel.startNewSession() }) {
                             Image(systemName: "plus")
+                                .foregroundColor(AppColor.amber)
                         }
                     }
                 }
@@ -49,32 +51,31 @@ struct ReflectTabView: View {
     // MARK: - Sessions List
 
     private var sessionsList: some View {
-        List {
-            ForEach(viewModel.sessions, id: \.id) { session in
-                Button(action: { selectedSession = session }) {
-                    sessionRow(session)
-                }
-                .buttonStyle(.plain)
-            }
-            .onDelete { indexSet in
-                for index in indexSet {
-                    _ = viewModel.deleteSession(viewModel.sessions[index])
+        ScrollView {
+            LazyVStack(spacing: Spacing.md) {
+                ForEach(viewModel.sessions, id: \.id) { session in
+                    Button(action: { selectedSession = session }) {
+                        sessionRow(session)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.sm)
+            .padding(.bottom, 80)
         }
-        .listStyle(.insetGrouped)
     }
 
     private func sessionRow(_ session: ReflectionSession) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            HStack {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(alignment: .top) {
                 Text(session.title)
                     .font(AppFont.headline)
                     .foregroundColor(AppColor.label)
                 Spacer()
                 Text("Intensity \(session.intensity)/10")
                     .font(AppFont.captionSecondary)
-                    .foregroundColor(AppColor.secondaryLabel)
+                    .foregroundColor(AppColor.clay)
             }
 
             Text(session.summary)
@@ -88,20 +89,21 @@ struct ReflectTabView: View {
                     .foregroundColor(AppColor.secondaryLabel)
                 Spacer()
                 if !session.themeTags.isEmpty {
-                    HStack(spacing: Spacing.xxs) {
+                    HStack(spacing: Spacing.xs) {
                         ForEach(session.themeTags.prefix(3), id: \.self) { tag in
                             Text(tag)
                                 .font(AppFont.captionSecondary)
                                 .padding(.horizontal, Spacing.sm)
                                 .padding(.vertical, Spacing.xxs)
-                                .background(AppColor.primary.opacity(0.1))
-                                .cornerRadius(CornerRadius.xl)
+                                .background(AppColor.sage.opacity(0.12))
+                                .foregroundColor(AppColor.sage)
+                                .cornerRadius(CornerRadius.pill)
                         }
                     }
                 }
             }
         }
-        .padding(.vertical, Spacing.xs)
+        .cardStyle()
     }
 
     // MARK: - Reflection Flow
@@ -126,7 +128,6 @@ struct ReflectTabView: View {
                     .font(AppFont.title)
                     .foregroundColor(AppColor.label)
 
-                // Summary
                 Group {
                     reviewField("Title", value: viewModel.title)
                     reviewField("Intensity", value: "\(viewModel.intensity)/10")
@@ -134,7 +135,9 @@ struct ReflectTabView: View {
                     reviewField("Support", value: viewModel.support.rawValue)
                 }
 
-                Divider()
+                Rectangle()
+                    .fill(AppColor.separator.opacity(0.3))
+                    .frame(height: 0.5)
 
                 reviewField(Strings.reflectStepCaptureTitle, value: viewModel.captureResponse)
                 reviewField(Strings.reflectStepMeaningTitle, value: viewModel.meaningResponse)
@@ -143,6 +146,7 @@ struct ReflectTabView: View {
                 HStack(spacing: Spacing.md) {
                     Button(Strings.back) { viewModel.previousStep() }
                         .buttonStyle(.bordered)
+                        .tint(AppColor.secondaryLabel)
 
                     Spacer()
 
@@ -152,8 +156,9 @@ struct ReflectTabView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, Spacing.xl)
                             .padding(.vertical, Spacing.md)
-                            .background(AppColor.primary)
-                            .cornerRadius(CornerRadius.md)
+                            .background(AppGradient.warmCTA)
+                            .cornerRadius(CornerRadius.lg)
+                            .shadow(color: AppColor.amber.opacity(0.2), radius: 6, x: 0, y: 3)
                     }
                     .disabled(viewModel.isSaving)
                 }
@@ -167,7 +172,7 @@ struct ReflectTabView: View {
         VStack(alignment: .leading, spacing: Spacing.xxs) {
             Text(label)
                 .font(AppFont.caption)
-                .foregroundColor(AppColor.secondaryLabel)
+                .foregroundColor(AppColor.amber.opacity(0.8))
             Text(value)
                 .font(AppFont.body)
                 .foregroundColor(AppColor.label)

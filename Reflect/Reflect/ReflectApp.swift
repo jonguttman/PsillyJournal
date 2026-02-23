@@ -18,6 +18,8 @@ struct ReflectApp: App {
                         .environmentObject(lockService)
                 }
             }
+            .warmBackground()
+            .tint(AppColor.amber)
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .background && appLockEnabled {
                     lockService.lock()
@@ -32,22 +34,44 @@ struct ReflectApp: App {
 
 struct LockGateView: View {
     @EnvironmentObject var lockService: LockService
+    @State private var appeared = false
 
     var body: some View {
         VStack(spacing: Spacing.xl) {
             Spacer()
 
-            Image(systemName: "lock.shield.fill")
-                .font(.system(size: 64))
-                .foregroundColor(AppColor.primary)
+            // Warm glow halo behind icon
+            ZStack {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [AppColor.amber.opacity(0.15), AppColor.amber.opacity(0.0)],
+                            center: .center,
+                            startRadius: 20,
+                            endRadius: 80
+                        )
+                    )
+                    .frame(width: 160, height: 160)
 
-            Text(Strings.appName)
-                .font(AppFont.largeTitle)
-                .foregroundColor(AppColor.label)
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 56))
+                    .foregroundColor(AppColor.amber)
+            }
+            .opacity(appeared ? 1 : 0)
+            .scaleEffect(appeared ? 1 : 0.8)
 
-            Text(Strings.appTagline)
-                .font(AppFont.body)
-                .foregroundColor(AppColor.secondaryLabel)
+            VStack(spacing: Spacing.sm) {
+                Text(Strings.appName)
+                    .font(AppFont.largeTitle)
+                    .foregroundColor(AppColor.label)
+
+                Text(Strings.appTagline)
+                    .font(.system(.body, design: .serif))
+                    .italic()
+                    .foregroundColor(AppColor.secondaryLabel)
+            }
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 10)
 
             Button(action: unlock) {
                 HStack(spacing: Spacing.sm) {
@@ -58,10 +82,12 @@ struct LockGateView: View {
                 .foregroundColor(.white)
                 .padding(.horizontal, Spacing.xl)
                 .padding(.vertical, Spacing.md)
-                .background(AppColor.primary)
-                .cornerRadius(CornerRadius.md)
+                .background(AppGradient.warmCTA)
+                .cornerRadius(CornerRadius.lg)
+                .shadow(color: AppColor.amber.opacity(0.2), radius: 8, x: 0, y: 4)
             }
             .padding(.top, Spacing.lg)
+            .opacity(appeared ? 1 : 0)
 
             if let error = lockService.errorMessage {
                 Text(error)
@@ -73,6 +99,12 @@ struct LockGateView: View {
             Spacer()
         }
         .padding(Spacing.xxl)
+        .warmBackground()
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.6)) {
+                appeared = true
+            }
+        }
         .task {
             unlock()
         }

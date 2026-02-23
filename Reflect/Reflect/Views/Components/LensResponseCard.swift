@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Displays an AI lens response in an expandable card.
+/// Displays an AI lens response in a warm expandable card.
 struct LensResponseCard: View {
     let response: LensResponse
     @State private var isExpanded = false
@@ -15,35 +15,53 @@ struct LensResponseCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Button(action: { withAnimation { isExpanded.toggle() } }) {
+            Button(action: { withAnimation(.easeInOut(duration: 0.3)) { isExpanded.toggle() } }) {
                 HStack {
-                    Image(systemName: response.lensType.iconName)
-                        .foregroundColor(lensColor)
+                    // Warm icon dot
+                    Circle()
+                        .fill(lensColor.opacity(0.2))
+                        .frame(width: 28, height: 28)
+                        .overlay(
+                            Image(systemName: response.lensType.iconName)
+                                .font(.system(size: 12))
+                                .foregroundColor(lensColor)
+                        )
+
                     Text(response.lensType.rawValue)
                         .font(AppFont.headline)
                         .foregroundColor(AppColor.label)
+
                     Spacer()
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+
+                    Image(systemName: "chevron.down")
                         .foregroundColor(AppColor.secondaryLabel)
                         .font(.caption)
+                        .rotationEffect(.degrees(isExpanded ? -180 : 0))
                 }
             }
             .buttonStyle(.plain)
 
             if isExpanded {
+                // Warm separator
+                Rectangle()
+                    .fill(lensColor.opacity(0.15))
+                    .frame(height: 0.5)
+
                 Text(response.content)
                     .font(AppFont.body)
                     .foregroundColor(AppColor.secondaryLabel)
                     .fixedSize(horizontal: false, vertical: true)
-                    .transition(.opacity)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(Spacing.md)
-        .background(lensColor.opacity(0.05))
-        .cornerRadius(CornerRadius.md)
+        .padding(Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.lg)
+                .fill(lensColor.opacity(0.04))
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.md)
-                .stroke(lensColor.opacity(0.2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: CornerRadius.lg)
+                .stroke(lensColor.opacity(0.15), lineWidth: 0.5)
         )
     }
 }
@@ -54,11 +72,10 @@ struct LensResponsesSection: View {
 
     var body: some View {
         if !responses.isEmpty {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
+            VStack(alignment: .leading, spacing: Spacing.md) {
                 Text("AI Reflections")
                     .font(AppFont.headline)
                     .foregroundColor(AppColor.label)
-                    .padding(.bottom, Spacing.xs)
 
                 ForEach(responses, id: \.id) { response in
                     LensResponseCard(response: response)

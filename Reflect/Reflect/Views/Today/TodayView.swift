@@ -13,26 +13,36 @@ struct TodayView: View {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
                     // Greeting
                     greetingSection
+                        .fadeRise(delay: 0)
 
                     // Check-in CTA or today's summary
-                    if viewModel.hasCheckedInToday, let checkIn = viewModel.todayCheckIn {
-                        todayCheckInCard(checkIn)
-                    } else {
-                        checkInCTA
+                    Group {
+                        if viewModel.hasCheckedInToday, let checkIn = viewModel.todayCheckIn {
+                            todayCheckInCard(checkIn)
+                        } else {
+                            checkInCTA
+                        }
                     }
+                    .fadeRise(delay: 0.1)
 
                     // Recent moment
                     if let moment = viewModel.recentMoment {
                         recentMomentCard(moment)
+                            .fadeRise(delay: 0.2)
                     }
 
                     // Recent check-ins
                     if !viewModel.recentCheckIns.isEmpty {
                         recentCheckInsSection
+                            .fadeRise(delay: 0.3)
                     }
+
+                    // Bottom spacing for tab bar
+                    Spacer().frame(height: 80)
                 }
                 .padding(Spacing.lg)
             }
+            .warmBackground()
             .navigationTitle(Strings.tabToday)
             .onAppear { viewModel.setup(context: modelContext) }
             .sheet(isPresented: $showCheckInForm) {
@@ -51,13 +61,20 @@ struct TodayView: View {
     // MARK: - Greeting
 
     private var greetingSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
             Text(viewModel.greeting)
                 .font(AppFont.largeTitle)
                 .foregroundColor(AppColor.label)
             Text(Strings.todayGreeting)
                 .font(AppFont.body)
                 .foregroundColor(AppColor.secondaryLabel)
+
+            // Subtle warm divider
+            Rectangle()
+                .fill(AppGradient.warmCTA)
+                .frame(width: 40, height: 2)
+                .cornerRadius(1)
+                .padding(.top, Spacing.xs)
         }
     }
 
@@ -79,17 +96,13 @@ struct TodayView: View {
                     .font(.title)
                     .foregroundColor(.white.opacity(0.9))
             }
-            .padding(Spacing.lg)
-            .background(
-                LinearGradient(
-                    colors: [AppColor.primary, AppColor.primary.opacity(0.8)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
+            .padding(Spacing.xl)
+            .background(AppGradient.warmCTA)
             .cornerRadius(CornerRadius.lg)
+            .shadow(color: AppColor.amber.opacity(0.25), radius: 10, x: 0, y: 5)
         }
         .buttonStyle(.plain)
+        .breathingPulse()
     }
 
     // MARK: - Today's Check-in Card
@@ -107,7 +120,7 @@ struct TodayView: View {
                 }) {
                     Text(Strings.edit)
                         .font(AppFont.caption)
-                        .foregroundColor(AppColor.primary)
+                        .foregroundColor(AppColor.amber)
                 }
             }
 
@@ -132,12 +145,18 @@ struct TodayView: View {
 
     private func recentMomentCard(_ moment: Moment) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(Strings.todayRecentMoment)
-                .font(AppFont.headline)
-                .foregroundColor(AppColor.label)
+            HStack {
+                Text(Strings.todayRecentMoment)
+                    .font(AppFont.headline)
+                    .foregroundColor(AppColor.label)
+                Spacer()
+                Image(systemName: "sparkle")
+                    .font(.caption)
+                    .foregroundColor(AppColor.amber.opacity(0.6))
+            }
 
             Text("\"\(moment.quote)\"")
-                .font(AppFont.body)
+                .font(.system(.body, design: .serif))
                 .italic()
                 .foregroundColor(AppColor.secondaryLabel)
                 .lineLimit(3)
@@ -149,8 +168,9 @@ struct TodayView: View {
                             .font(AppFont.captionSecondary)
                             .padding(.horizontal, Spacing.sm)
                             .padding(.vertical, Spacing.xxs)
-                            .background(AppColor.primary.opacity(0.1))
-                            .cornerRadius(CornerRadius.xl)
+                            .background(AppColor.sage.opacity(0.12))
+                            .foregroundColor(AppColor.sage)
+                            .cornerRadius(CornerRadius.pill)
                     }
                 }
             }
@@ -172,24 +192,28 @@ struct TodayView: View {
                         .font(AppFont.caption)
                         .foregroundColor(AppColor.secondaryLabel)
                     Spacer()
-                    HStack(spacing: Spacing.sm) {
-                        miniMetric("😊", value: checkIn.mood)
-                        miniMetric("⚡", value: checkIn.energy)
-                        miniMetric("😰", value: checkIn.stress)
+                    HStack(spacing: Spacing.md) {
+                        miniMetric(value: checkIn.mood, color: AppColor.mood)
+                        miniMetric(value: checkIn.energy, color: AppColor.energy)
+                        miniMetric(value: checkIn.stress, color: AppColor.stress)
                     }
                 }
                 .padding(.vertical, Spacing.xs)
                 if checkIn.id != viewModel.recentCheckIns.prefix(5).last?.id {
-                    Divider()
+                    Rectangle()
+                        .fill(AppColor.separator.opacity(0.3))
+                        .frame(height: 0.5)
                 }
             }
         }
         .cardStyle()
     }
 
-    private func miniMetric(_ emoji: String, value: Int) -> some View {
-        Text("\(emoji) \(value)")
-            .font(AppFont.captionSecondary)
+    private func miniMetric(value: Int, color: Color) -> some View {
+        Text("\(value)")
+            .font(AppFont.metricSmall)
             .monospacedDigit()
+            .foregroundColor(color)
+            .frame(width: 24)
     }
 }
