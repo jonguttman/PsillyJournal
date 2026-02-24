@@ -20,6 +20,7 @@ targets:
       path: Reflect/Info.plist
       properties:
         UILaunchScreen: {}
+        NSCameraUsageDescription: "Reflect uses your camera to scan product QR codes for verification."
     settings:
       base:
         INFOPLIST_FILE: Reflect/Info.plist
