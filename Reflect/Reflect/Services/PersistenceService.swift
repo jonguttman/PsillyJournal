@@ -18,6 +18,8 @@ final class PersistenceService {
             UserPreferences.self,
             VerifiedProduct.self,
             PendingToken.self,
+            RoutineEntry.self,
+            RoutineLog.self,
         ])
         let config = ModelConfiguration(
             "Reflect",
@@ -42,6 +44,8 @@ final class PersistenceService {
             UserPreferences.self,
             VerifiedProduct.self,
             PendingToken.self,
+            RoutineEntry.self,
+            RoutineLog.self,
         ])
         let config = ModelConfiguration(
             "ReflectPreview",
@@ -65,6 +69,8 @@ final class PersistenceService {
         try context.delete(model: UserPreferences.self)
         try context.delete(model: VerifiedProduct.self)
         try context.delete(model: PendingToken.self)
+        try context.delete(model: RoutineEntry.self)
+        try context.delete(model: RoutineLog.self)
         try context.save()
     }
 
