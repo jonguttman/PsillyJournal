@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.0] - 2026-02-23
+
+### Added
+- QR token verification system — scan product QR codes to verify authenticity
+- Routine tracker with daily/weekly/custom schedules and reminders
+- Routine adherence logging (log/skip) with weekly progress
+- Offline pending queue for QR scans without connectivity
+- Stale-while-revalidate product cache with 24h TTL
+- New Routine tab in main navigation
+- Camera permission handling with graceful fallback
+- Token validation service (domain allowlist, path prefix, regex)
+- API client with stub for development (LiveTokenAPIService + StubTokenAPIService)
+- App Store-safe UI copy for all scan/verify/error/offline states
+
 ## [0.3.0] - 2026-02-23
 
 ### Added
