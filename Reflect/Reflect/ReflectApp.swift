@@ -6,6 +6,8 @@ struct ReflectApp: App {
     @StateObject private var lockService = LockService()
     @AppStorage("appLockEnabled") private var appLockEnabled = false
     @Environment(\.scenePhase) private var scenePhase
+    @State private var connectivity = ConnectivityService()
+    @State private var routineViewModel = RoutineViewModel()
 
     var body: some Scene {
         WindowGroup {
@@ -30,6 +32,11 @@ struct ReflectApp: App {
                 if newPhase == .background && appLockEnabled {
                     lockService.lock()
                 }
+                if newPhase == .active {
+                    Task {
+                        await routineViewModel.resolvePendingTokens()
+                    }
+                }
             }
             #if DEBUG
             .onAppear {
@@ -40,6 +47,17 @@ struct ReflectApp: App {
                 }
             }
             #endif
+            .onAppear {
+                let context = PersistenceService.shared.container.mainContext
+                routineViewModel.setup(context: context)
+
+                // Wire connectivity → pending resolution
+                connectivity.onReconnect = {
+                    Task {
+                        await routineViewModel.resolvePendingTokens()
+                    }
+                }
+            }
         }
         .modelContainer(PersistenceService.shared.container)
     }
