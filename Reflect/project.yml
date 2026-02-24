@@ -36,3 +36,4 @@ targets:
       base:
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Reflect.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Reflect"
         BUNDLE_LOADER: "$(TEST_HOST)"
+        GENERATE_INFOPLIST_FILE: "YES"

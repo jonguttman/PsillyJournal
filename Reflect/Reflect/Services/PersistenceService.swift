@@ -16,6 +16,8 @@ final class PersistenceService {
             WeeklyLetter.self,
             LensResponse.self,
             UserPreferences.self,
+            VerifiedProduct.self,
+            PendingToken.self,
         ])
         let config = ModelConfiguration(
             "Reflect",
@@ -38,6 +40,8 @@ final class PersistenceService {
             WeeklyLetter.self,
             LensResponse.self,
             UserPreferences.self,
+            VerifiedProduct.self,
+            PendingToken.self,
         ])
         let config = ModelConfiguration(
             "ReflectPreview",
@@ -59,6 +63,8 @@ final class PersistenceService {
         try context.delete(model: WeeklyLetter.self)
         try context.delete(model: LensResponse.self)
         try context.delete(model: UserPreferences.self)
+        try context.delete(model: VerifiedProduct.self)
+        try context.delete(model: PendingToken.self)
         try context.save()
     }
 
