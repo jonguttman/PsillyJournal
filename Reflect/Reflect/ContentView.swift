@@ -4,13 +4,14 @@ struct ContentView: View {
     @State private var selectedTab: AppTab = .today
 
     enum AppTab: Int, CaseIterable {
-        case today, reflect, moments, insights, settings
+        case today, reflect, moments, routine, insights, settings
 
         var label: String {
             switch self {
             case .today: return Strings.tabToday
             case .reflect: return Strings.tabReflect
             case .moments: return Strings.tabMoments
+            case .routine: return Strings.tabRoutine
             case .insights: return Strings.tabInsights
             case .settings: return Strings.tabSettings
             }
@@ -21,6 +22,7 @@ struct ContentView: View {
             case .today: return "sun.max"
             case .reflect: return "brain.head.profile"
             case .moments: return "sparkles.rectangle.stack"
+            case .routine: return "leaf.circle"
             case .insights: return "chart.line.uptrend.xyaxis"
             case .settings: return "gearshape"
             }
@@ -31,6 +33,7 @@ struct ContentView: View {
             case .today: return "sun.max.fill"
             case .reflect: return "brain.head.profile.fill"
             case .moments: return "sparkles.rectangle.stack.fill"
+            case .routine: return "leaf.circle.fill"
             case .insights: return "chart.line.uptrend.xyaxis"
             case .settings: return "gearshape.fill"
             }
@@ -44,6 +47,7 @@ struct ContentView: View {
                 case .today: TodayView()
                 case .reflect: ReflectTabView()
                 case .moments: MomentsGalleryView()
+                case .routine: RoutineTabView()
                 case .insights: InsightsView()
                 case .settings: SettingsView()
                 }
