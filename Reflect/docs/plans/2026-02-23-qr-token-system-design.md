@@ -234,9 +234,9 @@ X-App-Version: 1.0.0
   "version": "v1",
   "product": {
     "product_id": "prod_abc123",
-    "name": "Third Eye Chai",
+    "name": "Chamomile Calm Blend",
     "category": "Herbal Tea",
-    "description": "A calming herbal blend with chamomile and adaptogens.",
+    "description": "A soothing herbal tea blend with chamomile.",
     "batch_id": "batch_2024Q1_042",
     "verified_at": "2025-11-15T10:30:00Z"
   },

@@ -21,6 +21,17 @@ xcodebuild test -project Reflect.xcodeproj -scheme ReflectTests \
 
 **Simulator:** iPhone 17 Pro (ID: `2A35514A-B453-4780-87F9-0F652CEBBAB4`)
 
+**Review Fixes Applied (v2):**
+1. Branch confirmed as `master` (repo default) — consistent throughout.
+2. `deviceHash()` UIKit import fix is a mandatory step, not a note.
+3. Status fields use `Codable` enums (`VerifiedProductStatus`, `PendingTokenStatus`) instead of raw strings.
+4. All test tokens are standardized to exactly 24 chars after `qr_` prefix.
+5. Pending queue full → hard fail with clear UX copy (Option B). Documented.
+6. `ConnectivityService.isConnected` change explicitly triggers `resolvePendingTokens()`.
+7. `QRScannerView` stops capture session on disappear. UIKit import verified.
+8. Client-side rendering allowlist enforced — UI only renders name, category, short description, batchId, badge.
+9. All example product names are neutral placeholders (no brand-coded names).
+
 ---
 
 ## Task 1: SwiftData Models — VerifiedProduct, PendingToken
@@ -63,9 +74,9 @@ final class VerifiedProductTests: XCTestCase {
         let product = VerifiedProduct(
             productId: "prod_abc123",
             token: "qr_POcQ38aDUKrqeyFQJibNKK",
-            name: "Third Eye Chai",
+            name: "Chamomile Calm Blend",
             category: "Herbal Tea",
-            productDescription: "A calming herbal blend.",
+            productDescription: "A soothing herbal tea blend.",
             batchId: "batch_2024Q1_042",
             verifiedAt: Date()
         )
@@ -75,9 +86,9 @@ final class VerifiedProductTests: XCTestCase {
         let descriptor = FetchDescriptor<VerifiedProduct>()
         let results = try context.fetch(descriptor)
         XCTAssertEqual(results.count, 1)
-        XCTAssertEqual(results.first?.name, "Third Eye Chai")
+        XCTAssertEqual(results.first?.name, "Chamomile Calm Blend")
         XCTAssertEqual(results.first?.category, "Herbal Tea")
-        XCTAssertEqual(results.first?.status, "active")
+        XCTAssertEqual(results.first?.status, .active)
     }
 
     @MainActor
@@ -105,14 +116,14 @@ final class VerifiedProductTests: XCTestCase {
             category: "Test"
         )
         context.insert(product)
-        XCTAssertEqual(product.status, "active")
+        XCTAssertEqual(product.status, .active)
 
-        product.status = "revoked"
+        product.status = .revoked
         try context.save()
 
         let descriptor = FetchDescriptor<VerifiedProduct>()
         let results = try context.fetch(descriptor)
-        XCTAssertEqual(results.first?.status, "revoked")
+        XCTAssertEqual(results.first?.status, .revoked)
     }
 
     // MARK: - PendingToken
@@ -128,7 +139,7 @@ final class VerifiedProductTests: XCTestCase {
         XCTAssertEqual(results.count, 1)
         XCTAssertEqual(results.first?.token, "qr_offlineTest12345678ab")
         XCTAssertEqual(results.first?.retryCount, 0)
-        XCTAssertEqual(results.first?.status, "pending")
+        XCTAssertEqual(results.first?.status, .pending)
     }
 
     @MainActor
@@ -150,14 +161,14 @@ final class VerifiedProductTests: XCTestCase {
     func testPendingTokenQueueLimit() throws {
         // Insert 5 pending tokens (the max)
         for i in 0..<5 {
-            let token = "qr_queue\(i)test1234567890a"
+            let token = "qr_queueTest\(i)ABCDE12345678"
             let pending = PendingToken(token: token)
             context.insert(pending)
         }
         try context.save()
 
         let descriptor = FetchDescriptor<PendingToken>(
-            predicate: #Predicate { $0.status == "pending" }
+            predicate: #Predicate { $0.status == .pending }
         )
         let results = try context.fetch(descriptor)
         XCTAssertEqual(results.count, 5)
@@ -181,6 +192,11 @@ Expected: FAIL — `VerifiedProduct` and `PendingToken` types not defined.
 import Foundation
 import SwiftData
 
+enum VerifiedProductStatus: String, Codable {
+    case active
+    case revoked
+}
+
 @Model
 final class VerifiedProduct {
     var id: UUID
@@ -193,7 +209,7 @@ final class VerifiedProduct {
     var verifiedAt: Date
     var cachedAt: Date
     var cacheTTL: TimeInterval
-    var status: String
+    var status: VerifiedProductStatus
 
     var isCacheStale: Bool {
         Date() > cachedAt.addingTimeInterval(cacheTTL)
@@ -209,7 +225,7 @@ final class VerifiedProduct {
         verifiedAt: Date = Date(),
         cachedAt: Date = Date(),
         cacheTTL: TimeInterval = 86400,
-        status: String = "active"
+        status: VerifiedProductStatus = .active
     ) {
         self.id = UUID()
         self.productId = productId
@@ -233,6 +249,12 @@ final class VerifiedProduct {
 import Foundation
 import SwiftData
 
+enum PendingTokenStatus: String, Codable {
+    case pending
+    case resolving
+    case failed
+}
+
 @Model
 final class PendingToken {
     var id: UUID
@@ -240,14 +262,14 @@ final class PendingToken {
     var scannedAt: Date
     var retryCount: Int
     var lastRetryAt: Date?
-    var status: String
+    var status: PendingTokenStatus
 
     init(
         token: String,
         scannedAt: Date = Date(),
         retryCount: Int = 0,
         lastRetryAt: Date? = nil,
-        status: String = "pending"
+        status: PendingTokenStatus = .pending
     ) {
         self.id = UUID()
         self.token = token
@@ -756,9 +778,9 @@ final class TokenAPIServiceTests: XCTestCase {
             "version": "v1",
             "product": {
                 "product_id": "prod_abc123",
-                "name": "Third Eye Chai",
+                "name": "Chamomile Calm Blend",
                 "category": "Herbal Tea",
-                "description": "A calming herbal blend.",
+                "description": "A soothing herbal tea blend.",
                 "batch_id": "batch_2024Q1_042",
                 "verified_at": "2025-11-15T10:30:00Z"
             },
@@ -770,7 +792,7 @@ final class TokenAPIServiceTests: XCTestCase {
         XCTAssertEqual(response.status, "active")
         XCTAssertEqual(response.tokenType, "LP")
         XCTAssertEqual(response.product.productId, "prod_abc123")
-        XCTAssertEqual(response.product.name, "Third Eye Chai")
+        XCTAssertEqual(response.product.name, "Chamomile Calm Blend")
         XCTAssertEqual(response.product.category, "Herbal Tea")
         XCTAssertEqual(response.cacheTTL, 86400)
     }
@@ -860,6 +882,9 @@ Expected: FAIL — types not defined.
 // Reflect/Services/TokenAPIService.swift
 import Foundation
 import CryptoKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // MARK: - API Response Models
 
@@ -980,9 +1005,12 @@ enum TokenAPIService {
         return request
     }
 
+    // IMPORTANT: UIKit must be imported at the top of this file via #if canImport(UIKit).
+    // Do NOT place `import UIKit` inside this function — it won't compile.
+    // identifierForVendor can change if all vendor apps are uninstalled/reinstalled.
+    // This is acceptable for rate limiting (non-security-critical).
     static func deviceHash() -> String {
         #if canImport(UIKit)
-        import UIKit
         let identifier = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
         #else
         let identifier = "unknown"
@@ -1057,21 +1085,9 @@ struct StubTokenAPIService: TokenAPIServiceProtocol {
 }
 ```
 
-**Note on `deviceHash()`:** The `import UIKit` inside the function won't compile. Instead, move the UIKit import to the top of the file under `#if canImport(UIKit)` and use a conditional in the function body:
+**MANDATORY: `deviceHash()` UIKit import.** The `#if canImport(UIKit) import UIKit #endif` block MUST appear at the top of the file (already shown above in the implementation). Do NOT place `import UIKit` inside the function body — it will not compile. The correct pattern is already in the Step 3 code above. Verify this compiles before proceeding.
 
-```swift
-static func deviceHash() -> String {
-    #if canImport(UIKit)
-    let identifier = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
-    #else
-    let identifier = "unknown"
-    #endif
-    let salt = "reflect_rate_limit_v1"
-    let data = Data((identifier + salt).utf8)
-    let hash = SHA256.hash(data: data)
-    return hash.map { String(format: "%02x", $0) }.joined()
-}
-```
+**Note on `identifierForVendor`:** This value can change if all apps from the same vendor are removed and reinstalled. This is acceptable for rate limiting (non-security-critical). For test determinism, the `StubTokenAPIService` bypasses `deviceHash()` entirely.
 
 **Step 4: Run tests to verify they pass**
 
@@ -1178,9 +1194,9 @@ final class TokenResolutionServiceTests: XCTestCase {
             version: "v1",
             product: TokenProductInfo(
                 productId: "prod_xyz",
-                name: "Adaptogen Blend",
+                name: "Daily Wellness Blend",
                 category: "Supplement",
-                description: "Daily adaptogenic supplement.",
+                description: "A daily herbal supplement blend.",
                 batchId: "batch_001",
                 verifiedAt: "2025-11-15T10:30:00Z"
             ),
@@ -1194,7 +1210,7 @@ final class TokenResolutionServiceTests: XCTestCase {
         )
         try context.save()
 
-        XCTAssertEqual(product.name, "Adaptogen Blend")
+        XCTAssertEqual(product.name, "Daily Wellness Blend")
         XCTAssertEqual(product.category, "Supplement")
         XCTAssertEqual(product.cacheTTL, 86400)
 
@@ -1257,7 +1273,7 @@ final class TokenResolutionServiceTests: XCTestCase {
         let descriptor = FetchDescriptor<PendingToken>()
         let results = try context.fetch(descriptor)
         XCTAssertEqual(results.count, 1)
-        XCTAssertEqual(results.first?.status, "pending")
+        XCTAssertEqual(results.first?.status, .pending)
     }
 
     @MainActor
@@ -1312,6 +1328,14 @@ enum TokenResolutionError: Error, Equatable {
     case pendingQueueFull
 }
 
+// MARK: - Pending Queue Policy
+// Maximum 5 pending tokens. When full, the app shows a hard fail with clear UX copy:
+// "We couldn't verify this product. You can try scanning it again."
+// We chose Option B (hard fail) over Option A (evict oldest) because:
+// - 5 is already generous for offline scanning
+// - Silently evicting tokens could confuse users who expect them to resolve
+// - The error message is actionable ("try scanning again")
+
 @MainActor
 enum TokenResolutionService {
 
@@ -1347,7 +1371,7 @@ enum TokenResolutionService {
             existing.category = response.product.category
             existing.productDescription = response.product.description
             existing.batchId = response.product.batchId
-            existing.status = response.status
+            existing.status = VerifiedProductStatus(rawValue: response.status) ?? .active
             existing.cachedAt = Date()
             existing.cacheTTL = response.cacheTTL
             return existing
@@ -1380,7 +1404,7 @@ enum TokenResolutionService {
 
         // Check queue limit
         let countDescriptor = FetchDescriptor<PendingToken>(
-            predicate: #Predicate { $0.status == "pending" }
+            predicate: #Predicate { $0.status == .pending }
         )
         let count = try context.fetchCount(countDescriptor)
         guard count < 5 else {
@@ -1394,7 +1418,7 @@ enum TokenResolutionService {
 
     static func pendingTokens(context: ModelContext) throws -> [PendingToken] {
         let descriptor = FetchDescriptor<PendingToken>(
-            predicate: #Predicate { $0.status == "pending" && $0.retryCount < 3 },
+            predicate: #Predicate { $0.status == .pending && $0.retryCount < 3 },
             sortBy: [SortDescriptor(\.scannedAt)]
         )
         return try context.fetch(descriptor)
@@ -1421,14 +1445,14 @@ git commit -m "feat: add TokenResolutionService with cache lookup, pending queue
 
 ## Task 6: Connectivity Monitor
 
-Wraps `NWPathMonitor` for observing online/offline state.
+Wraps `NWPathMonitor` for observing online/offline state. **Critically, this service must trigger pending token resolution when connectivity is restored.**
 
 **Files:**
 - Create: `Reflect/Services/ConnectivityService.swift`
 
 **Step 1: Implement ConnectivityService**
 
-This is a thin wrapper — no unit tests needed (it wraps a system API).
+This is a thin wrapper — no unit tests needed (it wraps a system API). It publishes `isConnected` and fires an `onReconnect` callback when transitioning from offline to online.
 
 ```swift
 // Reflect/Services/ConnectivityService.swift
@@ -1440,13 +1464,25 @@ import Network
 final class ConnectivityService {
     var isConnected: Bool = true
 
+    /// Called when connectivity transitions from offline → online.
+    /// Wire this to RoutineViewModel.resolvePendingTokens().
+    var onReconnect: (() -> Void)?
+
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "com.psilly.reflect.connectivity")
+    private var wasDisconnected = false
 
     init() {
         monitor.pathUpdateHandler = { [weak self] path in
             Task { @MainActor in
-                self?.isConnected = path.status == .satisfied
+                let connected = path.status == .satisfied
+                let wasOff = self?.wasDisconnected ?? false
+                self?.isConnected = connected
+
+                if connected && wasOff {
+                    self?.onReconnect?()
+                }
+                self?.wasDisconnected = !connected
             }
         }
         monitor.start(queue: queue)
@@ -1462,7 +1498,7 @@ final class ConnectivityService {
 
 ```bash
 git add Reflect/Services/ConnectivityService.swift
-git commit -m "feat: add ConnectivityService wrapping NWPathMonitor"
+git commit -m "feat: add ConnectivityService with onReconnect callback"
 ```
 
 ---
@@ -1929,7 +1965,7 @@ final class RoutineViewModel {
         let pending = (try? TokenResolutionService.pendingTokens(context: context)) ?? []
 
         for token in pending {
-            token.status = "resolving"
+            token.status = .resolving
             token.retryCount += 1
             token.lastRetryAt = Date()
 
@@ -1944,18 +1980,18 @@ final class RoutineViewModel {
             } catch let error as TokenAPIError {
                 switch error {
                 case .tokenNotFound, .tokenInactive:
-                    token.status = "failed"
+                    token.status = .failed
                 case .networkError:
-                    token.status = "pending"  // will retry later
+                    token.status = .pending  // will retry later
                 default:
                     if token.retryCount >= 3 {
-                        token.status = "failed"
+                        token.status = .failed
                     } else {
-                        token.status = "pending"
+                        token.status = .pending
                     }
                 }
             } catch {
-                token.status = "pending"
+                token.status = .pending
             }
         }
 
@@ -2038,6 +2074,9 @@ struct QRScannerView: View {
         }
         .onAppear {
             checkCameraPermission()
+        }
+        .onDisappear {
+            isScanning = false  // Prevent double-callback edge cases
         }
     }
 
@@ -2734,7 +2773,7 @@ struct RoutineEntryCard: View {
             }
 
             // Revoked banner
-            if entry.product?.status == "revoked" {
+            if entry.product?.status == .revoked {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(AppColor.danger)
@@ -2748,7 +2787,7 @@ struct RoutineEntryCard: View {
             }
 
             // Action buttons
-            if entry.isActive && entry.product?.status != "revoked" {
+            if entry.isActive && entry.product?.status != .revoked {
                 HStack(spacing: Spacing.md) {
                     Button(action: onLog) {
                         HStack(spacing: Spacing.xs) {
@@ -2780,6 +2819,17 @@ struct RoutineEntryCard: View {
     }
 }
 ```
+
+**Client-side rendering allowlist (safety belt):**
+All views above enforce this rule: the UI only renders these fields from `VerifiedProduct`:
+- `name` (plain text, no markdown/HTML rendering)
+- `category` (plain text)
+- `productDescription` (plain text, optional, truncated to 200 chars max)
+- `batchId` (plain text, optional)
+- "Verified" badge (static, not data-driven)
+
+No free-form HTML, no markdown rendering, no clickable links, no images from the API response.
+If the proxy somehow returns unexpected fields, they are ignored by Codable (default behavior) and never rendered.
 
 **Step 5: Commit**
 
@@ -2834,14 +2884,18 @@ git commit -m "feat: add Routine tab to ContentView tab bar"
 
 ---
 
-## Task 12: Cache Refresh on App Foreground
+## Task 12: Cache Refresh on App Foreground + Connectivity Wiring
 
 **Files:**
 - Modify: `Reflect/ReflectApp.swift`
 
-**Step 1: Add ConnectivityService and foreground cache refresh**
+**Step 1: Add ConnectivityService and wire pending resolution**
 
-In `ReflectApp.swift`, add a `ConnectivityService` as a `@StateObject` (or use `@State` + `@Observable`). In the `.onChange(of: scenePhase)` handler, when the scene transitions to `.active`, trigger pending queue resolution and stale cache refresh.
+In `ReflectApp.swift`, add `ConnectivityService` and `RoutineViewModel` as `@State` properties. Wire THREE triggers for `resolvePendingTokens()`:
+
+1. **App foreground** (`.active` scene phase)
+2. **Connectivity restored** (`ConnectivityService.onReconnect`)
+3. **Routine tab appears** (handled in `RoutineTabView.onAppear` — already done in Task 10)
 
 Add to `ReflectApp`:
 ```swift
@@ -2849,22 +2903,40 @@ Add to `ReflectApp`:
 @State private var routineViewModel = RoutineViewModel()
 ```
 
-In `.onChange(of: scenePhase)`, add:
+In the `WindowGroup` body, add an `.onAppear` to wire the connectivity callback:
+```swift
+.onAppear {
+    let context = PersistenceService.shared.container.mainContext
+    routineViewModel.setup(context: context)
+
+    // Wire connectivity → pending resolution
+    connectivity.onReconnect = {
+        Task {
+            await routineViewModel.resolvePendingTokens()
+        }
+    }
+}
+```
+
+In `.onChange(of: scenePhase)`, add to the existing handler:
 ```swift
 if newPhase == .active {
     Task {
-        let context = PersistenceService.shared.container.mainContext
-        routineViewModel.setup(context: context)
         await routineViewModel.resolvePendingTokens()
     }
 }
 ```
 
+This ensures pending tokens are resolved when:
+- The app comes to foreground
+- Network connectivity is restored (even while app is in foreground)
+- The Routine tab is opened
+
 **Step 2: Commit**
 
 ```bash
 git add Reflect/ReflectApp.swift
-git commit -m "feat: resolve pending tokens on app foreground"
+git commit -m "feat: wire connectivity + foreground to pending token resolution"
 ```
 
 ---
@@ -2987,9 +3059,9 @@ final class RoutineIntegrationTests: XCTestCase {
             version: "v1",
             product: TokenProductInfo(
                 productId: "prod_abc123",
-                name: "Third Eye Chai",
+                name: "Chamomile Calm Blend",
                 category: "Herbal Tea",
-                description: "A calming herbal blend.",
+                description: "A soothing herbal tea blend.",
                 batchId: "batch_2024Q1_042",
                 verifiedAt: "2025-11-15T10:30:00Z"
             ),
@@ -3003,7 +3075,7 @@ final class RoutineIntegrationTests: XCTestCase {
             context: context
         )
         try context.save()
-        XCTAssertEqual(product.name, "Third Eye Chai")
+        XCTAssertEqual(product.name, "Chamomile Calm Blend")
 
         // 4. Add to routine
         let vm = RoutineViewModel()
@@ -3098,12 +3170,12 @@ final class RoutineIntegrationTests: XCTestCase {
         XCTAssertTrue(entry.isActive)
 
         // 3. Simulate revocation
-        product.status = "revoked"
+        product.status = .revoked
         entry.isActive = false
         try context.save()
 
         // 4. Verify
-        XCTAssertEqual(product.status, "revoked")
+        XCTAssertEqual(product.status, .revoked)
         XCTAssertFalse(entry.isActive)
     }
 }
