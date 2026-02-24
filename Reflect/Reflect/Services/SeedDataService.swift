@@ -20,6 +20,7 @@ enum SeedDataService {
         let sessions = insertReflections(context: context)
         insertMoments(context: context, checkIns: checkIns, sessions: sessions)
         insertWeeklyLetter(context: context)
+        insertRoutineData(context: context)
 
         try? context.save()
     }
@@ -286,6 +287,85 @@ enum SeedDataService {
             createdAt: endDate
         )
         context.insert(letter)
+    }
+    // MARK: - Routine Data
+
+    private static func insertRoutineData(context: ModelContext) {
+        let calendar = Calendar.current
+
+        // Clear existing routine data
+        try? context.delete(model: VerifiedProduct.self)
+        try? context.delete(model: RoutineEntry.self)
+        try? context.delete(model: RoutineLog.self)
+        try? context.delete(model: PendingToken.self)
+
+        // Product 1: Daily supplement — linked with logs
+        let product1 = VerifiedProduct(
+            productId: "prod_seed_001",
+            token: "qr_seedChamomileCalm01abcd",
+            name: "Chamomile Calm Blend",
+            category: "Herbal Tea",
+            productDescription: "A soothing herbal tea blend with chamomile, lavender, and passionflower.",
+            batchId: "batch_2024Q1_042",
+            verifiedAt: calendar.date(byAdding: .day, value: -14, to: Date())!
+        )
+        context.insert(product1)
+
+        let entry1 = RoutineEntry(product: product1, schedule: .daily)
+        entry1.linkedAt = calendar.date(byAdding: .day, value: -10, to: Date())!
+        context.insert(entry1)
+
+        // Log 6 of the last 7 days (skipped 3 days ago)
+        for daysAgo in [0, 1, 2, 4, 5, 6] {
+            let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date())!
+            let log = RoutineLog(routineEntry: entry1, loggedAt: date)
+            context.insert(log)
+        }
+        // Skipped entry for 3 days ago
+        let skipDate = calendar.date(byAdding: .day, value: -3, to: Date())!
+        let skipLog = RoutineLog(routineEntry: entry1, loggedAt: skipDate, skipped: true, note: "Ran out, need to restock")
+        context.insert(skipLog)
+
+        // Product 2: Weekly supplement
+        let product2 = VerifiedProduct(
+            productId: "prod_seed_002",
+            token: "qr_seedLionsMane01abcdefgh",
+            name: "Lion's Mane Extract",
+            category: "Functional Mushroom",
+            productDescription: "Dual-extracted lion's mane mushroom for cognitive support.",
+            batchId: "batch_2024Q2_018",
+            verifiedAt: calendar.date(byAdding: .day, value: -7, to: Date())!
+        )
+        context.insert(product2)
+
+        let entry2 = RoutineEntry(
+            product: product2,
+            schedule: .weekly,
+            scheduleDays: [1, 3, 5],
+            reminderTime: calendar.date(bySettingHour: 8, minute: 0, second: 0, of: Date()),
+            reminderEnabled: true
+        )
+        entry2.linkedAt = calendar.date(byAdding: .day, value: -7, to: Date())!
+        context.insert(entry2)
+
+        // Log 2 of 3 expected this week
+        for daysAgo in [1, 5] {
+            let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date())!
+            let log = RoutineLog(routineEntry: entry2, loggedAt: date)
+            context.insert(log)
+        }
+
+        // Product 3: Saved but not yet added to routine
+        let product3 = VerifiedProduct(
+            productId: "prod_seed_003",
+            token: "qr_seedReishiCalm01abcdefg",
+            name: "Reishi Calm Tincture",
+            category: "Adaptogen",
+            productDescription: "Organic reishi mushroom tincture for stress resilience.",
+            batchId: "batch_2024Q3_007",
+            verifiedAt: calendar.date(byAdding: .day, value: -2, to: Date())!
+        )
+        context.insert(product3)
     }
 }
 #endif
